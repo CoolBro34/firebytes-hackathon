@@ -144,7 +144,10 @@ async function api(request, env, parts) {
         if (!bytes) return json({ error: "Bad request" }, 400);
         if (bytes.length > 2000000) return json({ error: "Image too large" }, 413);
         const model = env.VISION_MODEL || "@cf/meta/llama-3.2-11b-vision-instruct";
-        const input = { messages: [{ role: "user", content: VISION_PROMPT }], image: Array.from(bytes), max_tokens: 400 };
+        // Workers AI vision wants the image as a data URL inside the message (verified live on Nov 21 2026)
+        const mime = bytes[0] === 0x89 ? "image/png" : "image/jpeg";
+        const dataUrl = "data:" + mime + ";base64," + String(body.image).trim().replace(/^data:[^,]*;base64,/i, "");
+        const input = { messages: [{ role: "user", content: [{ type: "text", text: VISION_PROMPT }, { type: "image_url", image_url: { url: dataUrl } }] }], max_tokens: 400 };
         let out;
         try { out = await env.AI.run(model, input); }
         catch (e) {

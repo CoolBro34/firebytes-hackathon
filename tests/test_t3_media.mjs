@@ -29,7 +29,7 @@ const image = Buffer.from("tiny image").toString("base64");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { description: "Students are building a game together.", text_in_image: "Saturday Coding Club" });
   assert.equal(calls[0].model, "@cf/meta/llama-3.2-11b-vision-instruct");
-  assert.deepEqual(calls[0].input.image, Array.from(Buffer.from("tiny image")));
+  assert.equal(calls[0].input.messages[0].content[1].image_url.url, `data:image/jpeg;base64,${image}`);
 }
 {
   const { env } = makeEnv(() => ({ response: "DESCRIPTION: Students are coding.\nTEXT: NONE" }));
