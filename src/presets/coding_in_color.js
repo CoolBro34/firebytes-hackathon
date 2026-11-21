@@ -1,12 +1,14 @@
 // PRESET: Coding in Color — Instagram posts -> family newsletter, plus anonymous retention tracking.
 // Alumni updates are voluntary and consent-based; first name is optional and contact data is kept only with consent. All demo content is FAKE.
 const d = n => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); }; // date n days from today
+// Organization copy is passed into AI drafts and shown in newsletter footers.
 const ORG = { name: "Coding in Color", mission: "Coding in Color is on a mission to deliver educational resources for students who currently do not have access to computer science courses in their communities nor schools." };
+// This list keeps session choices aligned with the nonprofit's current program names.
 const PROGRAMS = ["AI Academy: Spark", "AI Academy: Amplify", "AI Academy: Reboot", "Hackathons", "Summer Camps"];
 const pct = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : "");
 const avg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-/* ---------- small helpers for the newsletter tools (browser side; AI itself runs on the Cloudflare Worker) ---------- */
+/* ---------- Newsletter helpers: format and prepare drafts in the browser; AI calls remain in the Worker. ---------- */
 const NL = {
   async postJSON(path, body) {
     const r = await apiFetch(CONFIG.apiBase + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -161,6 +163,7 @@ const CONFIG = {
   currency: "$", storage: "auto", apiBase: "", navEntities: ["update", "session"], navOrder: ["dashboard", "update", "x/newsletter", "session"],
 
   entities: {
+    // Instagram source material. Unsent older events/sign-ups are flagged for staff attention.
     post: {
       label: "Instagram posts", singular: "Post", icon: "📸", titleField: "title",
       fields: [
@@ -173,6 +176,7 @@ const CONFIG = {
         { key: "transcript", label: "Said in the reel (AI)", type: "textarea", hideInTable: true },
         { key: "used", label: "In a newsletter", type: "checkbox" }
       ],
+      // Risk rule: old unsent event and sign-up announcements need a follow-up.
       rowClass: r => (!r.used && r.date && r.date <= d(-14) && (r.kind === "event" || r.kind === "sign-up")) ? "flag-warn" : "",
       attentionReason: () => "event/sign-up post from 2+ weeks ago that never went out in a newsletter",
       summary: [
@@ -187,6 +191,7 @@ const CONFIG = {
         { title: "AI Academy: Reboot for parents", date: d(-24), kind: "news", link: "https://instagram.com/p/demo5", caption: "Parents and guardians: AI Academy: Reboot is a free virtual program with weekly live sessions on computer, AI and everyday digital skills.", imageNotes: "", transcript: "", used: true }
       ]
     },
+    // Anonymous retention counts only; notes must not contain student names.
     session: {
       label: "Sessions", singular: "Session", icon: "🗓️", titleField: "program",
       fields: [
@@ -198,6 +203,7 @@ const CONFIG = {
         { key: "families", label: "Families/parents present", type: "number", min: 0, default: 0 },
         { key: "notes", label: "Notes (no names)", type: "textarea", hideInTable: true }
       ],
+      // Retention risk rules flag return rates below 50% or 70%; counts stay anonymous.
       rowClass: r => { const p = pct(r.returning, r.headcount); return p === "" ? "" : p < 50 ? "flag-bad" : p < 70 ? "flag-warn" : ""; },
       attentionReason: r => `${fmt.date(r.date)}: only ${pct(r.returning, r.headcount)}% came back from the previous session`,
       summary: [
@@ -218,6 +224,7 @@ const CONFIG = {
                 { date: d(-6), program: "Hackathons", headcount: 16, returning: 13, families: 9 }
       ]
     },
+    // Voluntary alumni records. New submissions are surfaced for review; feature permission requires consent.
     update: {
       label: "Alumni updates", singular: "Alumni update", icon: "🎓", titleField: "firstName", titleFallback: "(anonymous)",
       fields: [
@@ -239,6 +246,7 @@ const CONFIG = {
         { key: "contact", label: "Contact (consent only)", type: "text", hideInTable: true },
         { key: "submittedAt", label: "Submitted", type: "text" }
       ],
+      // Risk rule: all newly submitted alumni updates are queued for staff review.
       rowClass: r => r.status === "new" ? "flag-warn" : "",
       attentionReason: () => "new alumni update to review",
       aiActions: [{ id: "spotlight", label: "✨ Spotlight blurb" }],
@@ -260,6 +268,7 @@ const CONFIG = {
         { firstName: "Devin", programs: "Summer Camps, Hackathons", yearsAttended: "2022-2023", gradYear: "2024", nowDoing: "working (other field)", field: "", school: "", story: "Working in a new field and keeping a personal coding project moving in free time.", link: "", proudOf: "Making time to keep learning", imageNotes: "", status: "featured", consentShare: true, consentContact: true, contact: "", submittedAt: new Date(d(-2) + "T12:00:00.000Z").toISOString() }
       ]
     },
+    // Saved newsletter drafts; reached from the Newsletter extra view.
     issue: {
       label: "Newsletters", singular: "Newsletter", icon: "📰", titleField: "subject",
       fields: [
@@ -275,5 +284,6 @@ const CONFIG = {
     }
   },
 
+  // Combined newsletter workflow: add Instagram material, build drafts, and navigate to saved records.
   extraViews: [{ id: "newsletter", label: "Newsletter", icon: "📰", render: newsletterView }]
 };

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Swap the CONFIG block of index.html for a preset (or your own config file). Standard library only.
+Swap the CONFIG block of the config-driven staff app for a preset or custom config. Standard library only.
 
   python3 apply_preset.py presets/pantry.js
   python3 apply_preset.py presets/volunteers.js --name "Sunrise Helpers" --tagline "Fill every shift" --theme sunset --logo 🌅
   python3 apply_preset.py presets/bakery_demo.js            # go back to the demo
   python3 build/apply_preset.py src/presets/pantry.js     # (inside the GitHub repo layout)
 
-Presets: volunteers, pantry, donors, clients, events, directory, bakery_demo.
-A backup is saved as index.html.bak. Then rebuild the Worker (python3 cloudflare/build_worker.py) and redeploy.
+The starter presets are examples, while src/presets/coding_in_color.js configures this project.
+A backup is saved as index.html.bak. Rebuild the single-file Worker with python3 build/build_worker.py.
 Tip: browser storage is keyed by app name, so a renamed app starts with fresh demo data.
 """
 import argparse, re, shutil, sys

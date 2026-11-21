@@ -6,7 +6,8 @@
   "scripts": {
     "build": "python3 build/build_worker.py",
     "dev": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test": "npm run build && node tests/run_all.mjs"
   },
   "devDependencies": { "wrangler": "^4.0.0" }
 }
