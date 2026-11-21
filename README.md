@@ -175,7 +175,7 @@ The project started from Pranit's generic, config-driven starter template prepar
 
 ## Status
 
-**Finished:** voluntary alumni updates; consent-aware review and featuring; outcome dashboard; anonymous session headcounts; Instagram post entry; optional AI image descriptions and reel transcription; AI-assisted newsletter drafts with a simple fallback; Spanish edition (Workers AI); CSV tools and KV export/reset.
+**Finished:** voluntary alumni updates; consent-aware review and featuring; outcome dashboard; anonymous session headcounts; Instagram post entry; optional AI image descriptions and reel transcription; AI-assisted newsletter drafts with a simple fallback; Spanish edition (Workers AI, verified live); CSV tools and KV export/reset.
 
 **Mocked up:** demo posts, sessions and alumni records are fake; there is no real student outcome data in this repository. AI drafts need staff review.
 
