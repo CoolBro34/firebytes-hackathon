@@ -16,4 +16,5 @@ binding = "AI"
 
 # Text model for the small AI drafts (llama-3.1-8b was retired on Workers AI)
 [vars]
+# Optional staff lock: configure with `npx wrangler secret put STAFF_CODE`; never put the value here.
 AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"

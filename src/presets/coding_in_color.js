@@ -1,5 +1,5 @@
 // PRESET: Coding in Color — Instagram posts -> family newsletter, plus anonymous retention tracking.
-// No student names or personal data are stored anywhere (the org can't keep student data). All demo content is FAKE.
+// Alumni updates are voluntary and consent-based; first name is optional and contact data is kept only with consent. All demo content is FAKE.
 const d = n => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); }; // date n days from today
 const ORG = { name: "Coding in Color", mission: "Coding in Color is on a mission to deliver educational resources for students who currently do not have access to computer science courses in their communities nor schools." };
 const PROGRAMS = ["AI Academy: Spark", "AI Academy: Amplify", "AI Academy: Reboot", "Hackathons", "Summer Camps"];
@@ -9,12 +9,12 @@ const avg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 /* ---------- small helpers for the newsletter tools (browser side; AI itself runs on the Cloudflare Worker) ---------- */
 const NL = {
   async postJSON(path, body) {
-    const r = await fetch(CONFIG.apiBase + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await apiFetch(CONFIG.apiBase + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || "Request failed (" + r.status + ")");
     return j;
   },
-  async caps() { try { const r = await fetch(CONFIG.apiBase + "/api/capabilities"); return r.ok ? await r.json() : {}; } catch (e) { return {}; } },
+  async caps() { try { const r = await apiFetch(CONFIG.apiBase + "/api/capabilities"); return r.ok ? await r.json() : {}; } catch (e) { return {}; } },
   bytesToB64(bytes) { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); },
   // Shrink an image to max 1024px JPEG so it uploads fast
   async imageToB64(file) {
@@ -38,12 +38,22 @@ const NL = {
     return NL.bytesToB64(new Uint8Array(out.buffer));
   },
   // No-AI fallback: a simple newsletter straight from the post captions
-  simple(posts, period) {
+  simple(posts, period, alumni = []) {
+    const hasSpotlight = alumni.length > 0;
+    const sections = posts.slice(0, hasSpotlight ? 4 : 5).map(p => ({ heading: p.title || "Update", body: (p.caption || p.imageNotes || "").slice(0, 500), link: p.link || "" }));
+    if (hasSpotlight) {
+      const lines = alumni.slice(0, 2).map(a => {
+        const story = String(a.story || "").slice(0, 400).trim();
+        const sentence = (story.match(/^[\s\S]*?[.!?](?:\s|$)/) || [story])[0].trim();
+        return `${a.firstName || "A former student"}: ${sentence && /[.!?]$/.test(sentence) ? sentence : sentence + "."}`;
+      });
+      sections.push({ heading: "Alumni spotlight", body: lines.join(" "), link: alumni.find(a => a.link)?.link || "" });
+    }
     return {
       subject: `What's new at ${ORG.name}: ${period}`.slice(0, 60),
       preheader: `${posts.length} update${posts.length === 1 ? "" : "s"} from our Instagram, in one place`,
       intro: `Here's everything we shared on Instagram for ${period}, in one quick read. Thanks for being part of our community!`,
-      sections: posts.slice(0, 5).map(p => ({ heading: p.title || "Update", body: (p.caption || p.imageNotes || "").slice(0, 500), link: p.link || "" })),
+      sections,
       cta: "We'd love to see you at the next session. Bring a friend!"
     };
   },
@@ -64,10 +74,91 @@ ${n.sections.map(s => `<h2 style="font-size:18px;color:${P};margin:22px 0 6px">$
   download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 };
 
+async function newsletterView(el, api) {
+  const caps = await NL.caps(), ai = !!caps.media;
+  const posts = (await api.list("post")).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const alumni = (await api.list("update")).filter(a => a.status === "featured" && a.consentShare === true);
+  const month = new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  el.innerHTML = `<h1>📰 Newsletter</h1><p class="sub">Share Coding in Color updates and consented alumni stories with families.</p>
+    <details class="card" style="margin-bottom:14px"><summary style="cursor:pointer;font-weight:700;min-height:32px">➕ Add an Instagram post</summary>
+      <p class="count">Paste the caption, add photos and/or a reel. ${ai ? "Workers AI can read the images and transcribe the reel." : "You can enter the image notes and transcript yourself."}</p>
+      <div style="display:grid;gap:12px;max-width:760px">
+        <label>Short title <input id="pTitle" placeholder="e.g. AI Academy project showcase" style="width:100%"></label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap"><label>Posted <input id="pDate" type="date" value="${d(0)}"></label>
+          <label>Type <select id="pKind">${["event", "sign-up", "showcase", "news", "reminder"].map(k => `<option>${k}</option>`).join("")}</select></label>
+          <label style="flex:1;min-width:220px">Instagram link <input id="pLink" placeholder="https://instagram.com/p/..." style="width:100%"></label></div>
+        <label>Caption <textarea id="pCap" rows="4" style="width:100%" placeholder="Paste the post caption"></textarea></label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap"><label>Photos / flyers <input id="pImgs" type="file" accept="image/*" multiple></label><label>Reel / video <input id="pVid" type="file" accept="video/*,audio/*"></label></div>
+        ${ai ? '<button class="btn" id="pRun" type="button">✨ Read images &amp; reel with AI</button>' : ""}
+        <div id="pLog" class="count" aria-live="polite"></div>
+        <label>From the images <textarea id="pImgNotes" rows="3" style="width:100%"></textarea></label><label>Said in the reel <textarea id="pTrans" rows="3" style="width:100%"></textarea></label>
+        <div><button class="btn primary" id="pSave" type="button">Save post</button></div>
+      </div>
+    </details>
+    <section class="card"><h2>Build this month's newsletter</h2><div class="toolbar"><label>Covers <input id="nPeriod" value="${api.esc(month)}"></label><button class="btn primary" id="nGo">${ai ? "✨ Write newsletter with AI" : "Build newsletter"}</button>${ai ? '<button class="btn" id="nSimple">Simple version (no AI)</button>' : ""}<span class="spacer"></span><a href="#/post">All posts</a><a href="#/issue">Past newsletters</a></div>
+      ${posts.length ? `<table><tbody>${posts.map(p => `<tr><td style="width:38px"><input type="checkbox" data-post-id="${api.esc(p.id)}" ${p.used ? "" : "checked"} aria-label="Include ${api.esc(p.title)}"></td><td><b>${api.esc(p.title)}</b><div class="count">${api.esc(api.fmt.date(p.date))} · ${api.esc(p.kind || "")}${p.used ? " · already sent" : ""}</div></td></tr>`).join("")}</tbody></table>` : '<div class="empty">No Instagram posts yet. You can still build from featured alumni stories.</div>'}
+      ${alumni.length ? `<p class="count">${alumni.length} consented featured alumni update${alumni.length === 1 ? "" : "s"} will be considered for an Alumni spotlight.</p>` : ""}
+    </section><div id="nOut" style="margin-top:16px"></div>`;
+  const $$ = selector => el.querySelector(selector), log = message => { $$("#pLog").textContent = message; };
+  if (ai) $$("#pRun").onclick = async () => {
+    const images = [...$$("#pImgs").files], video = $$("#pVid").files[0], notes = [];
+    if (!images.length && !video) return api.toast("Add a photo or a reel first", true);
+    $$("#pRun").disabled = true;
+    try {
+      for (let i = 0; i < images.length; i++) {
+        log(`Reading image ${i + 1} of ${images.length}…`);
+        const result = await NL.postJSON("/api/media/describe", { image: await NL.imageToB64(images[i]) });
+        notes.push([result.description, result.text_in_image ? "Text in image: " + result.text_in_image : ""].filter(Boolean).join(" "));
+      }
+      if (notes.length) $$("#pImgNotes").value = notes.join("\n");
+      if (video) {
+        log("Pulling the audio out of the reel…"); const wav = await NL.videoToWavB64(video);
+        log("Transcribing the reel…"); $$("#pTrans").value = (await NL.postJSON("/api/media/transcribe", { audio: wav })).text;
+      }
+      log("Done. Check the text below, edit anything, then save.");
+    } catch (error) { log("⚠️ " + error.message + " (you can still type the notes yourself)"); }
+    $$("#pRun").disabled = false;
+  };
+  $$("#pSave").onclick = async () => {
+    const caption = $$("#pCap").value.trim(), title = $$("#pTitle").value.trim() || caption.split(/[.!?\n]/)[0].slice(0, 60);
+    if (!title && !caption) return api.toast("Add a caption or a title", true);
+    try {
+      await api.create("post", { title: title || "Instagram post", date: $$("#pDate").value, kind: $$("#pKind").value, link: $$("#pLink").value.trim(), caption,
+        imageNotes: $$("#pImgNotes").value.trim(), transcript: $$("#pTrans").value.trim(), used: false });
+      api.toast("Post saved"); window.dispatchEvent(new Event("hashchange"));
+    } catch (error) { log(error.message); }
+  };
+  const picked = () => [...el.querySelectorAll("input[data-post-id]:checked")].map(box => posts.find(post => post.id === box.dataset.postId)).filter(Boolean);
+  const renderResult = async (newsletter, usedPosts, includedAlumni, madeWith) => {
+    const html = NL.emailHTML(newsletter), plain = NL.plainText(newsletter);
+    $$("#nOut").innerHTML = `<div class="card"><div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn primary" id="cHtml">Copy for email</button><button class="btn" id="cText">Copy plain text</button><button class="btn" id="cDl">Download .html</button><button class="btn" id="cMark">Mark posts as sent</button></div><div style="background:#f3f4f6;padding:16px;border-radius:12px">${html}</div><p class="count">Written by ${api.esc(madeWith)}. Review before sending.</p></div>`;
+    await api.create("issue", { subject: newsletter.subject, period: $$("#nPeriod").value, created: d(0), posts: usedPosts.length + includedAlumni.length, madeWith, text: plain });
+    $$("#cHtml").onclick = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plain], { type: "text/plain" }) })]); api.toast("Copied. Paste into Gmail or Mailchimp"); } catch (error) { await navigator.clipboard.writeText(html); api.toast("Copied HTML"); } };
+    $$("#cText").onclick = () => navigator.clipboard.writeText(plain).then(() => api.toast("Copied"));
+    $$("#cDl").onclick = () => NL.download("newsletter-" + d(0) + ".html", `<!doctype html><meta charset="utf-8"><title>${esc(newsletter.subject)}</title><body style="background:#f3f4f6;padding:20px">${html}</body>`);
+    $$("#cMark").onclick = async () => { for (const post of usedPosts) await api.update("post", post.id, { ...post, used: true }); api.toast(`${usedPosts.length} posts marked as sent`); };
+  };
+  const build = async useAI => {
+    const selected = picked(), includedAlumni = alumni.slice(0, 2);
+    if (!selected.length && !includedAlumni.length) return api.toast("Pick at least one post or feature an alumni update", true);
+    const usedPosts = selected.slice(0, Math.max(0, 12 - includedAlumni.length));
+    if (!useAI) return renderResult(NL.simple(usedPosts, $$("#nPeriod").value, includedAlumni), usedPosts, includedAlumni, "simple template");
+    $$("#nOut").innerHTML = '<div class="card"><p class="count">✨ Workers AI is reading the posts and writing your newsletter…</p></div>';
+    try {
+      const alumniPosts = includedAlumni.map(person => ({ date: person.submittedAt || "", caption: `Alumni spotlight: ${person.firstName || "a former student"}: ${String(person.story || "").slice(0, 400)}`, imageNotes: "", transcript: "", link: person.link || "" }));
+      const instagramPosts = usedPosts.map(post => ({ date: post.date || "", caption: post.caption || post.title || "", imageNotes: post.imageNotes || "", transcript: post.transcript || "", link: post.link || "" }));
+      const newsletter = await NL.postJSON("/api/newsletter", { org: ORG, period: $$("#nPeriod").value, posts: instagramPosts.concat(alumniPosts) });
+      await renderResult(newsletter, usedPosts, includedAlumni, "Workers AI");
+    } catch (error) { $$("#nOut").innerHTML = `<div class="card"><p style="color:var(--danger)">${api.esc(error.message)}</p><p class="count">Tip: try again, or use the simple version.</p></div>`; }
+  };
+  $$("#nGo").onclick = () => build(ai);
+  if (ai) $$("#nSimple").onclick = () => build(false);
+}
+
 const CONFIG = {
-  appName: "Coding in Color", tagline: "Talent is everywhere. Accessibility isn't.", logo: "🎨",
+  appName: "Coding in Color", tagline: "Developing the future digital workforce through digital skilling, computer science and artificial intelligence education in Arizona", logo: "🎨",
   theme: "ocean", customTheme: { "--primary": "#2e7d32", "--side": "#123524", "--side-text": "#d1fae5" },
-  currency: "$", storage: "auto", apiBase: "",
+  currency: "$", storage: "auto", apiBase: "", navEntities: ["update", "session"], navOrder: ["dashboard", "update", "x/newsletter", "session"],
 
   entities: {
     post: {
@@ -127,6 +218,48 @@ const CONFIG = {
                 { date: d(-6), program: "Hackathons", headcount: 16, returning: 13, families: 9 }
       ]
     },
+    update: {
+      label: "Alumni updates", singular: "Alumni update", icon: "🎓", titleField: "firstName", titleFallback: "(anonymous)",
+      fields: [
+        { key: "firstName", label: "First name", type: "text" },
+        { key: "programs", label: "Programs attended", type: "text" },
+        { key: "yearsAttended", label: "Years attended", type: "text" },
+        { key: "gradYear", label: "Graduation year", type: "text" },
+        { key: "nowDoing", label: "What they are doing now", type: "select", options: ["high school", "college / university", "community college", "trade or bootcamp", "internship", "working in tech", "working (other field)", "building my own project", "other"] },
+        { key: "field", label: "Field", type: "text" },
+        { key: "school", label: "School or organization", type: "text" },
+        { key: "story", label: "Story", type: "textarea", hideInTable: true },
+        { key: "link", label: "Link", type: "text" },
+        { key: "proudOf", label: "Something they are proud of", type: "textarea" },
+        { key: "imageNotes", label: "Photo description", type: "textarea", hideInTable: true },
+        { key: "status", label: "Status", type: "select", options: ["new", "reviewed", "featured", "hidden"], badge: true, default: "new" },
+        { key: "consentShare", label: "Share consent", type: "checkbox" },
+        { key: "canFeature", label: "Can feature", type: "computed", compute: r => r.consentShare ? "yes" : "no" },
+        { key: "consentContact", label: "Contact consent", type: "checkbox" },
+        { key: "contact", label: "Contact (consent only)", type: "text", hideInTable: true },
+        { key: "submittedAt", label: "Submitted", type: "text" }
+      ],
+      rowClass: r => r.status === "new" ? "flag-warn" : "",
+      attentionReason: () => "new alumni update to review",
+      aiActions: [{ id: "spotlight", label: "✨ Spotlight blurb" }],
+      summary: [
+        { label: "Alumni updates", fn: "count" },
+        { label: "% in college or working", fn: "custom", format: "percent", hint: "college, internships and work", compute: rows => { const active = rows.filter(r => ["college / university", "community college", "internship", "working in tech", "working (other field)"].includes(r.nowDoing)).length; return rows.length ? active / rows.length * 100 : 0; } },
+        { label: "% in tech/CS", fn: "custom", format: "percent", hint: "tech work or a computer-related field of study", compute: rows => { const active = rows.filter(r => r.nowDoing === "working in tech" || /computer science|software|information technology|\bIT\b|artificial intelligence|data science/i.test(r.field || "")).length; return rows.length ? active / rows.length * 100 : 0; } },
+        { label: "New to review", fn: "countIf", test: r => r.status === "new" }
+      ],
+      charts: [{ title: "Where alumni are now", type: "doughnut", groupBy: "nowDoing" }, { title: "Updates by program", type: "bar", groupBy: "programs", splitComma: true }],
+      seed: [
+        { firstName: "Alex", programs: "AI Academy: Spark", yearsAttended: "2022-2023", gradYear: "2025", nowDoing: "college / university", field: "Computer Science", school: "Arizona State University", story: "Studying computer science at Arizona State University and gaining confidence by building projects.", link: "", proudOf: "Starting a computer science degree", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-30) + "T12:00:00.000Z").toISOString() },
+        { firstName: "Sam", programs: "Hackathons, AI Academy: Spark", yearsAttended: "2023-2024", gradYear: "2024", nowDoing: "community college", field: "Information Technology", school: "Maricopa Community Colleges", story: "Taking information technology classes at a Maricopa community college and practicing with small projects.", link: "", proudOf: "Keeping up with college coursework", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-25) + "T12:00:00.000Z").toISOString() },
+        { firstName: "Jordan", programs: "Summer Camps", yearsAttended: "2021-2022", gradYear: "2023", nowDoing: "internship", field: "Software development", school: "Phoenix technology company", story: "Completed an internship with a Phoenix technology company and learned how a software team works together.", link: "", proudOf: "Contributing to a team project", imageNotes: "", status: "reviewed", consentShare: false, consentContact: false, submittedAt: new Date(d(-22) + "T12:00:00.000Z").toISOString() },
+        { firstName: "Kai", programs: "Hackathons", yearsAttended: "2023-2024", gradYear: "", nowDoing: "building my own project", field: "Web development", school: "", story: "Building an app that helps neighbors share useful resources and learning more each time it changes.", link: "", proudOf: "Turning an idea into a working demo", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-18) + "T12:00:00.000Z").toISOString() },
+        { firstName: "Maya", programs: "AI Academy: Spark, Hackathons", yearsAttended: "2024-2025", gradYear: "2027", nowDoing: "high school", field: "", school: "", story: "Still in high school and working with a team on projects for student hackathons.", link: "", proudOf: "Presenting a project with my team", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-14) + "T12:00:00.000Z").toISOString() },
+        { firstName: "Riley", programs: "AI Academy: Reboot", yearsAttended: "2022-2023", gradYear: "2022", nowDoing: "trade or bootcamp", field: "IT support", school: "", story: "Exploring a technical training path and using digital skills in hands-on practice.", link: "", proudOf: "Sticking with a new learning goal", imageNotes: "", status: "hidden", consentShare: false, consentContact: false, submittedAt: new Date(d(-10) + "T12:00:00.000Z").toISOString() },
+        { firstName: "", programs: "AI Academy: Amplify", yearsAttended: "2021-2022", gradYear: "2021", nowDoing: "working in tech", field: "Information technology", school: "", story: "Working in technology and using problem-solving skills to support community projects.", link: "", proudOf: "Helping a team solve a tricky problem", imageNotes: "", status: "new", consentShare: true, consentContact: false, submittedAt: new Date(d(-5) + "T12:00:00.000Z").toISOString() },
+        { firstName: "Devin", programs: "Summer Camps, Hackathons", yearsAttended: "2022-2023", gradYear: "2024", nowDoing: "working (other field)", field: "", school: "", story: "Working in a new field and keeping a personal coding project moving in free time.", link: "", proudOf: "Making time to keep learning", imageNotes: "", status: "featured", consentShare: true, consentContact: true, contact: "", submittedAt: new Date(d(-2) + "T12:00:00.000Z").toISOString() }
+      ]
+    },
     issue: {
       label: "Newsletters", singular: "Newsletter", icon: "📰", titleField: "subject",
       fields: [
@@ -142,93 +275,5 @@ const CONFIG = {
     }
   },
 
-  extraViews: [
-    {
-      id: "addpost", label: "Add IG post", icon: "➕",
-      async render(el, api) {
-        const caps = await NL.caps(), ai = !!caps.media;
-        el.innerHTML = `<h1>➕ Add an Instagram post</h1>
-          <p class="sub">Paste the caption, drop in the photos and/or the reel. ${ai ? "Cloudflare Workers AI reads the text in the images, describes them, and transcribes the reel." : "AI extraction runs on the live site (Cloudflare Workers AI). Here you can still type notes yourself."}</p>
-          <div class="card" style="display:grid;gap:12px;max-width:760px">
-            <label>Short title <input id="pTitle" placeholder="e.g. Spring sign-ups open" style="width:100%"></label>
-            <div style="display:flex;gap:12px;flex-wrap:wrap"><label>Posted <input id="pDate" type="date" value="${d(0)}"></label>
-              <label>Type <select id="pKind">${["event", "sign-up", "showcase", "news", "reminder"].map(k => `<option>${k}</option>`).join("")}</select></label>
-              <label style="flex:1;min-width:220px">Instagram link <input id="pLink" placeholder="https://instagram.com/p/..." style="width:100%"></label></div>
-            <label>Caption <textarea id="pCap" rows="4" style="width:100%" placeholder="Paste the post caption"></textarea></label>
-            <div style="display:flex;gap:12px;flex-wrap:wrap"><label>Photos / flyers <input id="pImgs" type="file" accept="image/*" multiple></label>
-              <label>Reel / video <input id="pVid" type="file" accept="video/*,audio/*"></label></div>
-            ${ai ? '<button class="btn" id="pRun">✨ Read images &amp; reel with AI</button>' : ""}
-            <div id="pLog" class="count"></div>
-            <label>From the images <textarea id="pImgNotes" rows="3" style="width:100%"></textarea></label>
-            <label>Said in the reel <textarea id="pTrans" rows="3" style="width:100%"></textarea></label>
-            <div><button class="btn primary" id="pSave">Save post</button></div>
-          </div>`;
-        const $$ = s => el.querySelector(s), log = m => { $$("#pLog").textContent = m; };
-        if (ai) $$("#pRun").onclick = async () => {
-          const imgs = [...$$("#pImgs").files], vid = $$("#pVid").files[0], notes = [];
-          if (!imgs.length && !vid) return api.toast("Add a photo or a reel first", true);
-          $$("#pRun").disabled = true;
-          try {
-            for (let i = 0; i < imgs.length; i++) {
-              log(`Reading image ${i + 1} of ${imgs.length}…`);
-              const r = await NL.postJSON("/api/media/describe", { image: await NL.imageToB64(imgs[i]) });
-              notes.push([r.description, r.text_in_image ? "Text in image: " + r.text_in_image : ""].filter(Boolean).join(" "));
-            }
-            if (notes.length) $$("#pImgNotes").value = notes.join("\n");
-            if (vid) {
-              log("Pulling the audio out of the reel…"); const wav = await NL.videoToWavB64(vid);
-              log("Transcribing the reel…"); $$("#pTrans").value = (await NL.postJSON("/api/media/transcribe", { audio: wav })).text;
-            }
-            log("Done. Check the text below, edit anything, then save.");
-          } catch (e) { log("⚠️ " + e.message + " (you can still type the notes yourself)"); }
-          $$("#pRun").disabled = false;
-        };
-        $$("#pSave").onclick = async () => {
-          const cap = $$("#pCap").value.trim(), title = $$("#pTitle").value.trim() || cap.split(/[.!?\n]/)[0].slice(0, 60);
-          if (!title && !cap) return api.toast("Add a caption or a title", true);
-          await api.create("post", { title: title || "Instagram post", date: $$("#pDate").value, kind: $$("#pKind").value, link: $$("#pLink").value.trim(),
-            caption: cap, imageNotes: $$("#pImgNotes").value.trim(), transcript: $$("#pTrans").value.trim(), used: false });
-          api.toast("Post saved"); location.hash = "#/x/newsletter";
-        };
-      }
-    },
-    {
-      id: "newsletter", label: "Newsletter", icon: "📰",
-      async render(el, api) {
-        const caps = await NL.caps(), ai = !!caps.media;
-        const posts = (await api.list("post")).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-        const month = new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
-        el.innerHTML = `<h1>📰 Build this month's newsletter</h1>
-          <p class="sub">Families miss Instagram posts. Pick the posts, and ${ai ? "Workers AI" : "the template"} turns them into one email they'll actually read.</p>
-          <div class="card"><div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:10px"><label>Covers <input id="nPeriod" value="${api.esc(month)}"></label>
-            <button class="btn primary" id="nGo">${ai ? "✨ Write newsletter with AI" : "Build newsletter"}</button>${ai ? '<button class="btn" id="nSimple">Simple version (no AI)</button>' : ""}</div>
-            ${posts.length ? `<table><tbody>${posts.map(p => `<tr><td style="width:30px"><input type="checkbox" data-id="${api.esc(p.id)}" ${p.used ? "" : "checked"}></td><td><b>${api.esc(p.title)}</b><div class="count">${api.esc(api.fmt.date(p.date))} · ${api.esc(p.kind || "")}${p.used ? " · already sent" : ""}</div></td></tr>`).join("")}</tbody></table>` : '<div class="empty">No posts yet. Add one first.</div>'}</div>
-          <div id="nOut" style="margin-top:16px"></div>`;
-        const $$ = s => el.querySelector(s);
-        const picked = () => [...el.querySelectorAll("input[data-id]:checked")].map(b => posts.find(p => p.id === b.dataset.id)).filter(Boolean);
-        const show = async (n, chosen, madeWith) => {
-          const html = NL.emailHTML(n), text = NL.plainText(n);
-          $$("#nOut").innerHTML = `<div class="card"><div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-            <button class="btn primary" id="cHtml">Copy for email</button><button class="btn" id="cText">Copy plain text</button><button class="btn" id="cDl">Download .html</button><button class="btn" id="cMark">Mark posts as sent</button></div>
-            <div style="background:#f3f4f6;padding:16px;border-radius:12px">${html}</div><p class="count">Written by ${api.esc(madeWith)}. Review before sending.</p></div>`;
-          await api.create("issue", { subject: n.subject, period: $$("#nPeriod").value, created: d(0), posts: chosen.length, madeWith, text });
-          $$("#cHtml").onclick = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]); api.toast("Copied. Paste into Gmail or Mailchimp"); } catch (e) { await navigator.clipboard.writeText(html); api.toast("Copied HTML"); } };
-          $$("#cText").onclick = () => navigator.clipboard.writeText(text).then(() => api.toast("Copied"));
-          $$("#cDl").onclick = () => NL.download("newsletter-" + d(0) + ".html", `<!doctype html><meta charset="utf-8"><title>${esc(n.subject)}</title><body style="background:#f3f4f6;padding:20px">${html}</body>`);
-          $$("#cMark").onclick = async () => { for (const p of chosen) await api.update("post", p.id, { ...p, used: true }); api.toast(`${chosen.length} posts marked as sent`); };
-        };
-        const build = async useAI => {
-          const chosen = picked(); if (!chosen.length) return api.toast("Pick at least one post", true);
-          if (!useAI) return show(NL.simple(chosen, $$("#nPeriod").value), chosen, "simple template");
-          $$("#nOut").innerHTML = '<div class="card"><p class="count">✨ Workers AI is reading the posts and writing your newsletter…</p></div>';
-          try {
-            const n = await NL.postJSON("/api/newsletter", { org: ORG, period: $$("#nPeriod").value,
-              posts: chosen.slice(0, 12).map(p => ({ date: p.date || "", caption: p.caption || p.title || "", imageNotes: p.imageNotes || "", transcript: p.transcript || "", link: p.link || "" })) });
-            show(n, chosen, "Workers AI");
-          } catch (e) { $$("#nOut").innerHTML = `<div class="card"><p style="color:var(--danger)">${api.esc(e.message)}</p><p class="count">Tip: try again, or use the simple version.</p></div>`; }
-        };
-        if (posts.length) { $$("#nGo").onclick = () => build(ai); if (ai) $$("#nSimple").onclick = () => build(false); }
-      }
-    }
-  ]
+  extraViews: [{ id: "newsletter", label: "Newsletter", icon: "📰", render: newsletterView }]
 };

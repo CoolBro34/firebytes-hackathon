@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123524">
+  <title>Share your story | Coding in Color</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#173126;background:#f4f8f5;line-height:1.5;--green:#2e7d32;--dark:#123524;--border:#dce7df;--muted:#5b6d61;--focus:#14532d}
+    *{box-sizing:border-box}body{margin:0}header,footer{background:var(--dark);color:#fff}header{padding:18px max(20px,calc((100% - 920px)/2));display:flex;align-items:center;gap:12px}.wordmark{font-weight:750;font-size:20px;letter-spacing:.01em}.mark{width:34px;height:34px;flex:none}.hero{max-width:920px;margin:0 auto;padding:42px 20px 24px}.hero h1{font-size:clamp(30px,6vw,48px);line-height:1.08;margin:0 0 12px;color:var(--dark)}.hero p{font-size:18px;color:#41574a;margin:0;max-width:650px}.wrap{max-width:920px;margin:0 auto;padding:0 20px 44px}.card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:clamp(18px,4vw,30px);box-shadow:0 8px 24px rgba(18,53,36,.06)}.field{margin-bottom:18px}.field>label,.label{display:block;font-weight:650;margin-bottom:6px}.hint{color:var(--muted);font-size:14px;margin:4px 0 0}input[type=text],input[type=url],input[type=number],select,textarea{font:inherit;width:100%;min-height:48px;border:1px solid #aabbb0;border-radius:10px;padding:10px 12px;background:#fff;color:inherit}input[type=file]{display:block;width:100%;max-width:100%;min-height:44px;font:inherit}textarea{min-height:150px;resize:vertical}input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid #8ccf99;outline-offset:2px;border-color:var(--focus)}.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}.chip{min-height:48px;display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;background:#fbfdfb}.chip input,.check input{width:22px;height:22px;accent-color:var(--green);flex:none}.chip:has(input:checked){border-color:var(--green);background:#e8f5e9}.checks{display:grid;gap:12px;margin:18px 0}.check{display:flex;align-items:flex-start;gap:10px;min-height:44px}.check input{margin:2px 0 0}.button{min-height:48px;border:0;border-radius:10px;background:var(--green);color:#fff;padding:12px 20px;font:inherit;font-weight:700;cursor:pointer}.button:hover{background:#256629}.button:disabled{opacity:.65;cursor:wait}.error{color:#9f1c1c;font-weight:600}.notice{padding:12px 14px;background:#eff7f0;border-left:4px solid var(--green);border-radius:8px;color:#274a32;margin:16px 0}.success{text-align:center;padding:36px 16px}.success h2{font-size:32px;color:var(--dark)}.success p{font-size:18px}.honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}footer{padding:26px 20px;text-align:center}footer p{max-width:820px;margin:0 auto 10px;color:#e0eee4}footer a{color:#fff;font-weight:650}.footer-links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}.small{font-size:13px;color:#c7dbcd;margin-top:14px}@media(max-width:480px){header{padding:14px 18px}.hero{padding-top:30px}.wrap{padding-left:14px;padding-right:14px}.card{border-radius:14px}.button{width:100%}}
+  </style>
+</head>
+<body>
+  <header>
+    <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><path fill="#79c779" d="M20 2 37 12v16L20 38 3 28V12z"/><path fill="#123524" d="M16 12h5l-5 7h7l-8 10 3-8h-7z"/></svg>
+    <span class="wordmark">Coding in Color</span>
+  </header>
+  <section class="hero">
+    <h1>Once a Coding in Color student, always part of the family.</h1>
+    <p>Tell us what you're up to. Your story helps the next student get access.</p>
+  </section>
+  <main class="wrap">
+    <div id="formWrap" class="card">
+      <p class="notice">Share only what you are comfortable sharing. You can submit without your name.</p>
+      <form id="storyForm">
+        <div class="field"><label for="firstName">First name (optional)</label><input id="firstName" name="firstName" type="text" maxlength="40" autocomplete="given-name"></div>
+        <fieldset class="field" style="border:0;padding:0;margin-left:0;margin-right:0"><legend class="label">Which Coding in Color programs did you attend? <span aria-hidden="true">(choose 1-6)</span></legend><div id="programs" class="chips"></div></fieldset>
+        <div class="field"><label for="yearsAttended">Years you attended (optional)</label><input id="yearsAttended" name="yearsAttended" type="text" maxlength="20" placeholder="For example, 2024-2025"></div>
+        <div class="field"><label for="gradYear">Graduation year (optional)</label><input id="gradYear" name="gradYear" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="YYYY"></div>
+        <div class="field"><label for="nowDoing">What are you up to now? <span aria-hidden="true">*</span></label><select id="nowDoing" name="nowDoing" required>
+          <option value="">Choose one</option><option>high school</option><option>college / university</option><option>community college</option><option>trade or bootcamp</option><option>internship</option><option>working in tech</option><option>working (other field)</option><option>building my own project</option><option>other</option>
+        </select></div>
+        <div class="field"><label for="field">Field or area of study (optional)</label><input id="field" name="field" type="text" maxlength="80" placeholder="For example, computer science"></div>
+        <div class="field"><label for="school">School or organization (optional)</label><input id="school" name="school" type="text" maxlength="80"></div>
+        <div class="field"><label for="story">What are you up to? What did Coding in Color help with? <span aria-hidden="true">*</span></label><textarea id="story" name="story" minlength="20" maxlength="1200" required></textarea><p class="hint">20 to 1,200 characters. Please do not include someone else's private information.</p></div>
+        <div class="field"><label for="link">A project or portfolio link (optional)</label><input id="link" name="link" type="url" maxlength="300" placeholder="https://"><p class="hint">Use a public https:// link only.</p></div>
+        <div class="field"><label for="proudOf">Something you're proud of (optional)</label><input id="proudOf" name="proudOf" type="text" maxlength="300"></div>
+        <div class="field"><label for="photo">Show us something you built (optional)</label><input id="photo" name="image" type="file" accept="image/jpeg,image/png"><p class="hint">The photo is resized in your browser before upload.</p></div>
+        <div class="checks">
+          <label class="check"><input id="consentShare" name="consentShare" type="checkbox"><span>OK to feature my story (first name only) in newsletters and donor updates.</span></label>
+          <label class="check"><input id="consentContact" name="consentContact" type="checkbox"><span>OK for Coding in Color to contact me about my update.</span></label>
+        </div>
+        <div id="contactWrap" class="field" hidden><label for="contact">How can we contact you? (optional)</label><input id="contact" name="contact" type="text" maxlength="120" autocomplete="off"></div>
+        <div class="honeypot" aria-hidden="true"><label for="website">Leave this field blank</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+        <p class="notice">We only keep what you type here. Photos are read by AI to describe your project, then thrown away. First name is optional.</p>
+        <p id="message" class="error" role="status" aria-live="polite"></p>
+        <button id="submit" class="button" type="submit">Share my update</button>
+      </form>
+    </div>
+    <div id="success" class="card success" hidden aria-live="polite"><h2>Thank you! 💚</h2><p>Your update is with the Coding in Color team.</p><button id="another" class="button" type="button">Share another update</button></div>
+  </main>
+  <footer>
+    <p>Coding in Color is on a mission to deliver educational resources for students who currently do not have access to computer science courses in their communities nor schools.</p>
+    <div class="footer-links"><a href="/staff">Staff portal</a></div>
+    <p class="small">Built for Coding in Color at the FireBytes hackathon</p>
+  </footer>
+  <script>
+    const form = document.querySelector("#storyForm"), message = document.querySelector("#message"), programs = document.querySelector("#programs");
+    const inputNames = ["firstName", "yearsAttended", "gradYear", "nowDoing", "field", "school", "story", "link", "proudOf", "website"];
+    let programList = [];
+    function showError(text) { message.textContent = text; }
+    function chosenPrograms() { return [...programs.querySelectorAll("input:checked")].map(input => input.value); }
+    async function imageBase64(file) {
+      if (!file) return "";
+      if (!/^image\/(jpeg|png)$/.test(file.type)) throw new Error("Choose a JPEG or PNG photo.");
+      const image = await createImageBitmap(file);
+      const scale = Math.min(1, 1024 / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      const encoded = canvas.toDataURL("image/jpeg", 0.82).split(",")[1];
+      if (atob(encoded).length > 2000000) throw new Error("That photo is still too large. Choose a smaller image.");
+      return encoded;
+    }
+    async function loadPrograms() {
+      const response = await fetch("/api/public/programs");
+      if (!response.ok) throw new Error("Program options could not load. Refresh the page and try again.");
+      const data = await response.json(); programList = data.programs || [];
+      programs.innerHTML = programList.map((name, i) => `<label class="chip"><input type="checkbox" name="programs" value="${name.replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}" id="program${i}"><span>${name}</span></label>`).join("");
+    }
+    document.querySelector("#consentContact").addEventListener("change", event => { document.querySelector("#contactWrap").hidden = !event.target.checked; });
+    document.querySelector("#another").addEventListener("click", () => { form.reset(); document.querySelector("#contactWrap").hidden = true; document.querySelector("#formWrap").hidden = false; document.querySelector("#success").hidden = true; showError(""); window.scrollTo(0, 0); });
+    form.addEventListener("submit", async event => {
+      event.preventDefault(); showError("");
+      const selected = chosenPrograms();
+      if (selected.length < 1 || selected.length > 6) return showError("Choose between 1 and 6 programs.");
+      if (form.elements.story.value.trim().length < 20) return showError("Please tell us a little more in your story (at least 20 characters).");
+      const button = document.querySelector("#submit"); button.disabled = true; button.textContent = "Sending…";
+      try {
+        const file = form.elements.image.files[0];
+        const body = Object.fromEntries(inputNames.map(name => [name, form.elements[name].value.trim()]));
+        body.programs = selected; body.gradYear = body.gradYear || "";
+        body.proudOf = form.elements.proudOf.value.trim(); body.story = form.elements.story.value.trim();
+        body.consentShare = form.elements.consentShare.checked; body.consentContact = form.elements.consentContact.checked;
+        body.contact = body.consentContact ? form.elements.contact.value.trim() : "";
+        body.image = await imageBase64(file);
+        const response = await fetch("/api/alumni/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || "Your update could not be sent. Please try again.");
+        document.querySelector("#formWrap").hidden = true; document.querySelector("#success").hidden = false; window.scrollTo(0, 0);
+      } catch (error) { showError(error.message || "Your update could not be sent. Please try again."); }
+      button.disabled = false; button.textContent = "Share my update";
+    });
+    loadPrograms().catch(error => { showError(error.message); document.querySelector("#submit").disabled = true; });
+  </script>
+</body>
+</html>
