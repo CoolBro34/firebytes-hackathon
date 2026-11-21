@@ -36,10 +36,29 @@ function alumniWallItems(updates) {
   });
 }
 
+// Staff gallery includes private stories; status chips are display-only metadata.
+function staffGalleryItems(updates, filter = "all") {
+  const rows = Array.isArray(updates) ? updates : [];
+  return rows.filter(row => row && (filter === "hidden" ? row.status === "hidden" : row.status !== "hidden" && (filter === "all" || row.status === filter)))
+    .slice().sort((a, b) => (Date.parse(b.submittedAt || "") || 0) - (Date.parse(a.submittedAt || "") || 0))
+    .map(row => {
+      const item = alumniWallItems([row])[0] || {
+        firstName: String(row.firstName || "").trim().split(/\s+/)[0], nowDoing: String(row.nowDoing || ""),
+        field: String(row.field || ""), school: String(row.school || ""), story: String(row.story || ""),
+        programs: Array.isArray(row.programs) ? row.programs.join(", ") : String(row.programs || ""), submittedAt: String(row.submittedAt || ""),
+        label: `${String(row.firstName || "").trim().split(/\s+/)[0] || "Alum"} · ${(Array.isArray(row.programs) ? row.programs.join(", ") : String(row.programs || "")).split(",")[0].trim() || "Program"}`
+      };
+      item.id = row.id; item.status = row.status; item.private = row.consentShare !== true;
+      item.tag = row.status === "new" ? "NEW" : row.status === "featured" ? "FEATURED" : "REVIEWED";
+      item.record = row;
+      return item;
+    });
+}
+
 // Lazy OGL gallery. All card art is drawn from consented text in memory; no photo is uploaded or saved.
 const GALLERY = {
   create(container, options) {
-    let destroyed = false, renderer = null, raf = 0, observer = null, activeCanvas = null;
+    let destroyed = false, renderer = null, raf = 0, observer = null, activeCanvas = null, currentCards = [], moveBy = () => {}, centeredIndex = () => 0;
     const listeners = [];
     const add = (target, type, fn, config) => {
       target.addEventListener(type, fn, config);
@@ -65,15 +84,22 @@ const GALLERY = {
       if (destroyed) return;
       destroyed = true;
       stopWebGL();
+      container.removeEventListener("keydown", galleryKey);
       container.replaceChildren();
     };
+    const openCentered = () => { if (currentCards.length && options.onOpen) options.onOpen(currentCards[centeredIndex()]); };
+    const galleryKey = event => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); moveBy(event.key === "ArrowRight" ? 1 : -1); }
+      if (event.key === "Enter" && options.onOpen) { event.preventDefault(); openCentered(); }
+    };
+    container.addEventListener("keydown", galleryKey);
     const screenReaderList = cards => {
       const list = document.createElement("ul");
       list.className = "cic-gallery-sr-only";
-      list.setAttribute("aria-label", "Consented alumni stories");
+      list.setAttribute("aria-label", options.srLabel || "Consented alumni stories");
       cards.forEach(card => {
         const item = document.createElement("li");
-        item.textContent = `${card.label}. ${card.firstName || "A Coding in Color alum"}. ${card.nowDoing}. ${[card.field, card.school].filter(Boolean).join(" · ")}. Programs: ${card.programs}. ${card.story.slice(0, 110)}`;
+        item.textContent = `${card.label}. ${card.tag ? card.tag + ". " : ""}${card.private ? "Private. " : ""}${card.firstName || "A Coding in Color alum"}. ${card.nowDoing}. ${[card.field, card.school].filter(Boolean).join(" · ")}. Programs: ${card.programs}. ${card.story.slice(0, 110)}`;
         list.appendChild(item);
       });
       return list;
@@ -90,30 +116,26 @@ const GALLERY = {
       ctx.fillText("‹ IN ›", 54, 64);
       ctx.font = "500 22px Poppins, Arial, sans-serif";
       ctx.fillText(card.firstName || "A Coding in Color alum", 54, 124, 680);
-      ctx.font = "500 54px Archivo, Poppins, Arial, sans-serif";
+      ctx.font = "500 30px Archivo, Poppins, Arial, sans-serif";
       const headline = card.nowDoing ? card.nowDoing.charAt(0).toUpperCase() + card.nowDoing.slice(1) : "Alumni story";
-      wrapCanvasText(ctx, headline, 54, 215, 690, 66, 2);
-      ctx.font = "300 24px Poppins, Arial, sans-serif";
-      const schoolLine = [card.field, card.school].filter(Boolean).join(" · ");
-      if (schoolLine) wrapCanvasText(ctx, schoolLine, 54, 335, 690, 34, 1);
-      let chipX = 54, chipY = schoolLine ? 374 : 350;
-      ctx.font = "400 18px Poppins, Arial, sans-serif";
-      card.programs.split(",").map(value => value.trim()).filter(Boolean).slice(0, 6).forEach(program => {
-        const width = Math.min(660, ctx.measureText(program).width + 24);
-        if (chipX + width > 746) { chipX = 54; chipY += 42; }
-        ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 2; ctx.strokeRect(chipX, chipY, width, 34);
-        ctx.fillStyle = "#ffffff"; ctx.fillText(program, chipX + 12, chipY + 23, width - 20);
-        chipX += width + 10;
-      });
+      wrapCanvasText(ctx, headline, 54, 250, 690, 70, 2);
+      ctx.font = "400 21px Poppins, Arial, sans-serif";
+      const firstProgram = card.programs.split(",")[0].trim();
+      if (firstProgram) ctx.fillText(firstProgram, 54, 380, 690);
       ctx.font = "300 22px Poppins, Arial, sans-serif";
-      wrapCanvasText(ctx, excerpt(card.story), 54, 490, 690, 32, 2);
-      return { ...card, canvas, image: canvas.toDataURL("image/png"), artAlt: `${card.firstName || "A Coding in Color alum"}: ${headline}. ${schoolLine}. ${card.programs}. ${excerpt(card.story)}` };
+      wrapCanvasText(ctx, excerpt(card.story, 60), 54, 455, 690, 32, 2);
+      if (card.tag || card.private) {
+        ctx.font = "500 20px Poppins, Arial, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(`${card.private ? "🔒 Private  " : ""}${card.tag || ""}`, 746, 64, 500);
+      }
+      return { ...card, canvas, image: canvas.toDataURL("image/png"), artAlt: `${card.firstName || "A Coding in Color alum"}: ${headline}. ${[card.field, card.school].filter(Boolean).join(", ") || "Coding in Color alum"}. ${card.programs}. ${excerpt(card.story)}` };
     });
     const renderStatic = cards => {
       if (destroyed) return;
       stopWebGL();
       container.classList.add("cic-wall-static");
-      container.setAttribute("aria-label", "Consented alumni stories");
+      container.setAttribute("aria-label", options.srLabel || "Consented alumni stories");
       const row = document.createElement("div"); row.className = "cic-wall-row";
       cards.forEach(card => {
         const figure = document.createElement("figure"); figure.className = "cic-wall-figure";
@@ -122,14 +144,25 @@ const GALLERY = {
         figure.append(image, caption); row.appendChild(figure);
       });
       container.replaceChildren(row, screenReaderList(cards));
+      const step = Math.min(container.clientWidth * 0.25, 210) + 14;
+      moveBy = direction => { row.scrollBy({ left: direction * step, behavior: "smooth" }); };
+      centeredIndex = () => {
+        const figures = [...row.querySelectorAll("figure")];
+        if (!figures.length) return 0;
+        const center = row.scrollLeft + row.clientWidth / 2;
+        return figures.reduce((best, figure, index) => {
+          const distance = Math.abs(figure.offsetLeft + figure.offsetWidth / 2 - center);
+          return distance < best.distance ? { index, distance } : best;
+        }, { index: 0, distance: Infinity }).index;
+      };
     };
     const renderEmpty = () => {
       if (destroyed) return;
       const message = document.createElement("p");
       message.className = "cic-wall-empty";
-      message.textContent = "No consented alumni stories yet. Share the student page link to collect some. ";
-      const link = document.createElement("a"); link.href = "/"; link.textContent = "Student share page";
-      message.appendChild(link); container.replaceChildren(message);
+      message.textContent = options.emptyMessage || "No consented alumni stories yet. Share the student page link to collect some. ";
+      if (!options.emptyMessage) { const link = document.createElement("a"); link.href = "/"; link.textContent = "Student share page"; message.appendChild(link); }
+      container.replaceChildren(message);
     };
     const startWebGL = async (cards, ogl) => {
       const { Renderer, Camera, Transform, Plane, Program, Mesh, Texture, Vec2 } = ogl;
@@ -154,7 +187,7 @@ const GALLERY = {
       const fragment = `precision highp float; uniform vec2 uImageSizes; uniform vec2 uPlaneSizes; uniform sampler2D tMap; uniform float uBorderRadius; varying vec2 vUv; float roundedBoxSDF(vec2 p,vec2 b,float r){vec2 d=abs(p)-b;return length(max(d,vec2(0.0)))+min(max(d.x,d.y),0.0)-r;} void main(){vec2 ratio=vec2(min((uPlaneSizes.x/uPlaneSizes.y)/(uImageSizes.x/uImageSizes.y),1.0),min((uPlaneSizes.y/uPlaneSizes.x)/(uImageSizes.y/uImageSizes.x),1.0));vec2 uv=vec2(vUv.x*ratio.x+(1.0-ratio.x)*0.5,vUv.y*ratio.y+(1.0-ratio.y)*0.5);vec4 color=texture2D(tMap,uv);float d=roundedBoxSDF(vUv-0.5,vec2(0.5-uBorderRadius),uBorderRadius);float alpha=1.0-smoothstep(-0.002,0.002,d);gl_FragColor=vec4(color.rgb,alpha);}`;
       const titleFragment = `precision highp float; uniform sampler2D tMap; varying vec2 vUv; void main(){vec4 color=texture2D(tMap,vUv);if(color.a<0.1)discard;gl_FragColor=color;}`;
       const unit = (2 * camera.position.z * Math.tan(Math.PI / 8)) / height;
-      const cardHeight = height * 0.62, cardWidth = cardHeight * 4 / 3, titleHeight = 34, spacing = cardWidth + height * 0.09;
+      const cardHeight = height * 0.36, cardWidth = cardHeight * 4 / 3, titleHeight = 34, spacing = cardWidth + height * 0.025;
       const radius = (height * height + options.bend * options.bend) / (2 * options.bend);
       const entries = cards.map((card, index) => {
         const texture = new Texture(gl); texture.image = images[index]; texture.needsUpdate = true;
@@ -174,6 +207,8 @@ const GALLERY = {
         return { mesh, title, index };
       });
       const scroll = { current: 0, target: 0 }, pointer = { active: false, start: 0, target: 0 };
+      moveBy = direction => { scroll.target += direction * spacing; };
+      centeredIndex = () => ((Math.round(scroll.current / spacing) % cards.length) + cards.length) % cards.length;
       const setSizes = () => {
         if (!renderer) return;
         const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
@@ -185,17 +220,14 @@ const GALLERY = {
       const onRelease = () => { if (pointer.active) scroll.target = Math.round(scroll.target / spacing) * spacing; pointer.active = false; container.style.cursor = "grab"; };
       const onTouchStart = event => { if (event.touches.length) { pointer.active = true; pointer.start = event.touches[0].clientX; pointer.target = scroll.target; } };
       const onTouchMove = event => { if (pointer.active && event.touches.length) { event.preventDefault(); scroll.target = pointer.target + (pointer.start - event.touches[0].clientX) * options.scrollSpeed * 0.025; } };
-      const onKey = event => {
-        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-          event.preventDefault(); scroll.target += (event.key === "ArrowRight" ? 1 : -1) * spacing;
-        }
-      };
       add(container, "wheel", onWheel, { passive: false });
       add(container, "mousedown", onMouseDown); add(container, "mousemove", onMouseMove); add(window, "mouseup", onRelease);
       add(container, "touchstart", onTouchStart, { passive: true }); add(container, "touchmove", onTouchMove, { passive: false });
-      add(window, "touchend", onRelease); add(window, "touchcancel", onRelease); add(container, "keydown", onKey);
+      add(window, "touchend", onRelease); add(window, "touchcancel", onRelease);
       container.style.cursor = "grab";
       setSizes(); observer = new ResizeObserver(setSizes); observer.observe(container);
+      moveBy = direction => { scroll.target += direction * spacing; };
+      centeredIndex = () => ((Math.round(scroll.current / spacing) % cards.length) + cards.length) % cards.length;
       let previous = 0;
       const frame = () => {
         if (destroyed || !renderer) return;
@@ -222,12 +254,14 @@ const GALLERY = {
     };
     return {
       destroy,
+      openCentered,
       mount(updates) {
         void (async () => {
           try {
             await document.fonts.ready;
             if (destroyed) return;
-            const items = alumniWallItems(updates);
+            const items = options.items ? options.items(updates) : alumniWallItems(updates);
+            currentCards = items;
             if (!items.length) { renderEmpty(); return; }
             const cards = drawCards(items);
             if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { renderStatic(cards); return; }
@@ -236,9 +270,10 @@ const GALLERY = {
             try { await startWebGL(cards, ogl); }
             catch (error) { stopWebGL(); renderStatic(cards); }
           } catch (error) {
+            console.warn("Alumni gallery fell back:", error);
             if (!destroyed) {
-              try { renderStatic(drawCards(alumniWallItems(updates))); }
-              catch (fallbackError) { renderEmpty(); }
+              try { renderStatic(drawCards(options.items ? options.items(updates) : alumniWallItems(updates))); }
+              catch (fallbackError) { console.warn("Alumni gallery fallback failed:", fallbackError); renderEmpty(); }
             }
           }
         })();
@@ -261,9 +296,9 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
     ctx.fillText(value, x, y + index * lineHeight, maxWidth);
   });
 }
-function excerpt(text) {
+function excerpt(text, limit = 110) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
-  return value.length > 110 ? value.slice(0, 109).trimEnd() + "…" : value;
+  return value.length > limit ? value.slice(0, limit - 1).trimEnd() + "…" : value;
 }
 
 // The generic dashboard is engine-owned, so add this preset card only after its charts exist.
@@ -274,18 +309,19 @@ function watchDashboardForAlumniWall() {
     const stats = dashboard.querySelector("#stats"), charts = dashboard.querySelector("#charts");
     if (!stats || !charts || !charts.children.length || dashboard.querySelector("#alumniWallCard")) return;
     const section = document.createElement("section"); section.id = "alumniWallCard"; section.className = "card"; section.style.marginBottom = "14px";
+    ensureWallCSS();
     const styles = document.createElement("style");
-    styles.textContent = ".cic-wall-host{position:relative;height:420px;background:#000;overflow:hidden;border-radius:0}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:28px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(74vw,330px);margin:0;scroll-snap-align:center;color:#fff;text-align:center;font:500 14px Poppins,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#fff;text-align:center;padding:80px 18px;margin:0;font:400 15px Poppins,Arial,sans-serif}.cic-wall-empty a{color:#fff;font-weight:500;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:300px}.cic-wall-figure{flex-basis:76vw}}";
+    styles.textContent = "";
     const heading = document.createElement("h2"); heading.textContent = "Alumni wall"; heading.style.margin = "0 0 4px";
     const subline = document.createElement("p"); subline.className = "sub"; subline.textContent = "Consented stories from former students. Drag or scroll to explore.";
     const host = document.createElement("div"); host.id = "alumniWall"; host.className = "cic-wall-host";
     host.tabIndex = 0; host.setAttribute("role", "region"); host.setAttribute("aria-label", "Alumni wall, use left and right arrow keys");
-    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#fff;padding:24px"; host.appendChild(loading);
+    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#111;padding:24px"; host.appendChild(loading);
     const review = document.createElement("p"); review.style.margin = "12px 0 0";
     const link = document.createElement("a"); link.href = "#/update"; link.textContent = "Review all alumni updates →"; review.appendChild(link);
     section.append(styles, heading, subline, host, review);
     dashboard.insertBefore(section, stats);
-    const wall = GALLERY.create(host, { bend: 3, textColor: "#ffffff", borderRadius: 0.04, font: "500 28px Poppins, sans-serif", scrollSpeed: 2, scrollEase: 0.05 });
+    const wall = GALLERY.create(host, { bend: 3.5, textColor: "#111", borderRadius: 0.08, font: "500 26px Poppins, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03 });
     window._cleanup = wall.destroy;
     Store.list("update").then(updates => wall.mount(updates)).catch(() => wall.mount([]));
   };
@@ -294,6 +330,46 @@ function watchDashboardForAlumniWall() {
   addWall();
 }
 watchDashboardForAlumniWall();
+
+function renderStaffAlumniGallery(name, main, api) {
+  if (name !== "update") return;
+  ensureWallCSS();
+  const styles = document.createElement("style");
+  styles.textContent = ".cic-staff-gallery{margin:0 0 18px}.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}.cic-gallery-filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.cic-gallery-filters button{border:0;background:#F3F3F3;color:#111;border-radius:0;padding:8px 14px;cursor:pointer}.cic-gallery-filters button[aria-pressed=true]{background:#0A8F27;color:#fff}.cic-open-story{margin-top:10px}@media(max-width:640px){.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}}";
+  const section = document.createElement("section"); section.className = "cic-staff-gallery";
+  const pageHeading = main.querySelector("h1"); if (pageHeading) pageHeading.textContent = "Alumni updates";
+  const filters = document.createElement("div"); filters.className = "cic-gallery-filters"; filters.setAttribute("role", "group"); filters.setAttribute("aria-label", "Filter alumni updates");
+  const host = document.createElement("div"); host.className = "cic-wall-host"; host.tabIndex = 0; host.setAttribute("role", "region"); host.setAttribute("aria-label", "Alumni updates gallery, use left and right arrows to browse and Enter to edit");
+  const open = document.createElement("button"); open.type = "button"; open.className = "btn primary cic-open-story"; open.textContent = "Open this story";
+  section.append(styles, filters, host, open);
+  const toolbar = main.querySelector(".toolbar"); if (toolbar) main.insertBefore(section, toolbar);
+  let filter = "all", wall = null, updates = [];
+  const show = async () => {
+    if (wall) wall.destroy();
+    const items = staffGalleryItems(updates, filter);
+    wall = GALLERY.create(host, {
+      items: rows => staffGalleryItems(rows, filter), emptyMessage: "No alumni updates match this filter.", srLabel: "Alumni updates including private stories",
+      bend: 3.5, textColor: "#111", borderRadius: 0.08, font: "500 26px Poppins, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03,
+      onOpen: item => item && api.openForm("update", item.record, async () => { updates = await api.list("update"); show(); })
+    });
+    wall.mount(updates);
+    open.onclick = () => wall && wall.openCentered();
+  };
+  ["all", "new", "reviewed", "featured", "hidden"].forEach(value => {
+    const button = document.createElement("button"); button.type = "button"; button.textContent = value[0].toUpperCase() + value.slice(1); button.setAttribute("aria-pressed", value === filter ? "true" : "false");
+    button.onclick = () => { filter = value; filters.querySelectorAll("button").forEach(item => item.setAttribute("aria-pressed", String(item === button))); show(); };
+    filters.appendChild(button);
+  });
+  window._cleanup = () => { if (wall) wall.destroy(); };
+  api.list("update").then(rows => { updates = rows; show(); }).catch(() => { updates = []; show(); });
+}
+
+/* Shared gallery CSS, injected once into <head> so every page that mounts a gallery gets the base layout. */
+const WALL_BASE_CSS = ".cic-wall-host{position:relative;height:380px;background:#F3F3F3;box-shadow:0 40px 100px rgba(0,0,0,.05);overflow:hidden;border-radius:40px}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:14px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(25vw,210px);margin:0;scroll-snap-align:center;color:#111;text-align:center;font:500 26px Poppins,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:8px;box-shadow:0 16px 32px rgba(0,0,0,.12)}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#111;text-align:center;padding:80px 18px;margin:0;font:400 15px Poppins,Arial,sans-serif}.cic-wall-empty a{color:#0A8F27;font-weight:500;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:280px;border-radius:28px}.cic-wall-figure{flex-basis:42vw;font-size:16px}}";
+function ensureWallCSS() {
+  if (document.getElementById("cic-wall-css")) return;
+  const tag = document.createElement("style"); tag.id = "cic-wall-css"; tag.textContent = WALL_BASE_CSS; document.head.appendChild(tag);
+}
 
 /* ---------- Newsletter helpers: format and prepare drafts in the browser; AI calls remain in the Worker. ---------- */
 const NL = {
@@ -467,6 +543,7 @@ const CONFIG = {
   appName: "Coding in Color", tagline: "Talent is everywhere, opportunity is not.", logo: "‹IN›",
   theme: "ocean", customTheme: { "--primary": "#0A8F27", "--side": "#000000", "--side-text": "#e5e5e5" },
   currency: "$", storage: "auto", apiBase: "", navEntities: ["update", "session"], navOrder: ["dashboard", "update", "x/newsletter", "session"],
+  entityViewHook: renderStaffAlumniGallery,
 
   entities: {
     // Instagram source material. Unsent older events/sign-ups are flagged for staff attention.

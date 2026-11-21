@@ -43,4 +43,19 @@ const anonymous = alumniWallItems([record("  ", "featured", true, 10, { programs
 assert.equal(anonymous[0].firstName, "");
 assert.equal(anonymous[0].label, "Alum · Summer Camps");
 console.log("ok   blank first name uses Alum label");
+const helperStart = source.indexOf("function staffGalleryItems(");
+const helperEnd = source.indexOf("\n}\n\n// Lazy OGL gallery", helperStart);
+assert.ok(helperStart >= 0 && helperEnd > helperStart, "staffGalleryItems must remain a standalone pure function");
+const staffGalleryItems = new Function(`${source.slice(start, end + 2)}\n${source.slice(helperStart, helperEnd + 2)}; return staffGalleryItems;`)();
+const staffRows = [
+  record("New Private", "new", false, 10), record("Reviewed Shared", "reviewed", true, 9),
+  record("Featured Private", "featured", false, 8), record("Hidden", "hidden", true, 11)
+].map((row, index) => ({ ...row, id: `staff-${index}` }));
+assert.deepEqual(staffGalleryItems(staffRows).map(item => item.firstName), ["New", "Reviewed", "Featured"]);
+assert.deepEqual(staffGalleryItems(staffRows, "new").map(item => item.tag), ["NEW"]);
+assert.deepEqual(staffGalleryItems(staffRows, "hidden").map(item => item.firstName), ["Hidden"]);
+assert.equal(staffGalleryItems(staffRows)[0].private, true);
+assert.equal(staffGalleryItems(staffRows)[1].tag, "REVIEWED");
+assert.equal(staffGalleryItems(staffRows)[2].tag, "FEATURED");
+console.log("ok   staff filters exclude hidden by default and include private flags and status tags");
 console.log("T8 TESTS PASSED");

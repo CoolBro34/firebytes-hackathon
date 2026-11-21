@@ -23,7 +23,7 @@ Coding in Color reports that over 500 students have participated in its programs
 
 ### Alumni wall
 
-The dashboard gallery shows only consented featured/reviewed alumni stories (with consented new updates used only to fill a wall with fewer than three stories); its cards are drawn from text and never use photos. OGL loads from jsDelivr at runtime; `prefers-reduced-motion`, unavailable WebGL, or import failures use a static horizontal gallery. Gallery adapted from an open-source CircularGallery component (OGL), ported to vanilla JS.
+The dashboard Alumni wall shows only consented featured/reviewed alumni stories (using consented new updates only when fewer than three approved stories exist). Its light, rounded gallery stage uses smaller curved cards and dark labels; card art comes from text and never uses photos. The Alumni updates staff page puts the same gallery above the editable table, with All, New, Reviewed, Featured, and Hidden filters and private tags for stories that are not cleared to share. OGL loads from jsDelivr at runtime; reduced motion, unavailable WebGL, or import failures use a static horizontal gallery. Gallery adapted from an open-source CircularGallery component (OGL), ported to vanilla JS.
 
 ![Student share page](screenshots/share.jpg)
 ![Dashboard](screenshots/dashboard.jpg)
