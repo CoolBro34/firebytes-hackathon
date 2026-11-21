@@ -18,7 +18,7 @@ Coding in Color reports that over 500 students have participated in its programs
 
 - **Alumni share their story:** former students can submit what they are doing now, the programs they attended, and what the program helped with. First name is optional, and the student chooses whether their story may be featured.
 - **Staff review and impact dashboard:** staff can review voluntary updates, see education and career outcomes, and track anonymous session headcounts and return rates.
-- **Instagram posts to newsletter:** staff paste Instagram post details, optionally use AI to read images or transcribe a reel, then combine selected posts with consented alumni spotlights into a newsletter draft. They review and copy or download the draft for their email tool.
+- **Instagram posts to newsletter:** staff paste Instagram post details, optionally use AI to read images or transcribe a reel, then combine selected posts with consented alumni spotlights into a newsletter draft. They can make a one-click Spanish edition and copy it for Campaign Monitor, their newsletter tool with a bilingual EN/ES signup form.
 - **Anonymous session headcounts:** staff can record aggregate attendance and returning counts without storing student names.
 
 ### Alumni wall
@@ -103,6 +103,7 @@ When `STAFF_CODE` is configured, every API route requires the `x-staff-code` hea
 | `POST` | `/api/media/describe` | Staff | `{image}` base64 or data URL | `{description, text_in_image}` | `400` invalid body/image, `403` foreign Origin, `404` no AI, `413` image over 2 MB, `429` limit, `502` AI failure |
 | `POST` | `/api/media/transcribe` | Staff | `{audio}` base64 or data URL | `{text}` | `400` invalid body/audio, `403` foreign Origin, `404` no AI, `413` audio over 8 MB, `429` limit, `502` AI failure |
 | `POST` | `/api/newsletter` | Staff | `{org?, period?, posts:[{date,caption,imageNotes,transcript,link}]}`; 1–12 posts | `{subject,preheader,intro,sections,cta}` | `400` invalid/empty/over-limit posts, `403` foreign Origin, `404` no AI, `429` limit, `502` invalid output or AI failure |
+| `POST` | `/api/newsletter/translate` | Staff | `{newsletter:{subject,preheader,intro,sections:[{heading,body,link}],cta},lang:"es"}` | Translated newsletter with original section links reattached | `400` invalid body/language, `403` foreign Origin, `404` no AI, `429` limit, `502` invalid output or AI failure |
 | `GET` | `/api/<entity>` | Staff | — | Array of records; empty array if missing | `404` if KV is not bound or entity path is invalid |
 | `POST` | `/api/<entity>` | Staff | JSON object | Created record with generated `id` (`201`) | `400` invalid JSON or configured required field, `404` no KV |
 | `GET` | `/api/<entity>/<id>` | Staff | — | Record | `404` no KV or record missing |
@@ -133,6 +134,7 @@ AI is optional and runs inside the Worker:
 - **Image descriptions:** `@cf/meta/llama-3.2-11b-vision-instruct` (or `VISION_MODEL`). The Worker calls the model with a text prompt and an `image_url` whose URL is a `data:image/jpeg;base64,...` or PNG data URL inside the user message content. Raw photo bytes are not written to KV.
 - **Reel transcription:** `@cf/openai/whisper-large-v3-turbo` (or `WHISPER_MODEL`), with a fallback to `@cf/openai/whisper` using a byte array if the first call fails.
 - **Newsletter writing:** `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (or `NEWSLETTER_MODEL`) receives bounded post fields and a fixed system prompt and returns structured newsletter JSON.
+- **Newsletter translation:** Workers AI receives bounded newsletter text without links; the Worker reattaches the original links server-side by section index.
 - **Allowlisted drafts:** `/api/ai` accepts only the fixed action definitions in `AI_ACTIONS` (including summaries, reminders, donor updates, check-ins and alumni spotlights). Its Worker AI model uses `AI_MODEL`; `wrangler.toml` sets this to `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. The retired `llama-3.1-8b` is not the configured model.
 
 Prompts are fixed in the Worker and say record content is data, not instructions. Records, organization fields, posts, and output sizes are clamped; newsletter output is parsed and shape-checked before returning. AI endpoints share a best-effort limit of 10 requests per minute per IP when KV is bound. If AI is unavailable, the newsletter UI offers a simple non-AI draft from saved captions and featured alumni stories; the AI endpoints return an error when unavailable.
@@ -173,11 +175,11 @@ The project started from Pranit's generic, config-driven starter template prepar
 
 ## Status
 
-**Finished:** voluntary alumni updates; consent-aware review and featuring; outcome dashboard; anonymous session headcounts; Instagram post entry; optional AI image descriptions and reel transcription; AI-assisted newsletter drafts with a simple fallback; CSV tools and KV export/reset.
+**Finished:** voluntary alumni updates; consent-aware review and featuring; outcome dashboard; anonymous session headcounts; Instagram post entry; optional AI image descriptions and reel transcription; AI-assisted newsletter drafts with a simple fallback; Spanish edition (Workers AI); CSV tools and KV export/reset.
 
 **Mocked up:** demo posts, sessions and alumni records are fake; there is no real student outcome data in this repository. AI drafts need staff review.
 
-**Next:** Instagram posts are pasted, not auto-pulled (automatic import needs a Meta Graph API token); newsletters are copied into the nonprofit's email tool, not sent; staff use a shared passcode rather than per-user accounts; possible next steps are Graph API import, email sending, individual staff logins, and Spanish editions.
+**Next:** Instagram posts are pasted, not auto-pulled (automatic import needs a Meta Graph API token); newsletters are copied into the nonprofit's email tool, not sent; staff use a shared passcode rather than per-user accounts; possible next steps are Graph API import, email sending, and individual staff logins.
 
 ## License
 

@@ -12,6 +12,7 @@ MODULES = [
     "storage.js",    # KV access and generic entity CRUD/export/reset
     "ai.js",         # allowlisted text actions and rate limiting
     "media.js",      # image/audio handling and newsletter generation
+    "translate.js",  # Spanish newsletter translation
     "alumni.js",     # public program list and voluntary alumni submissions
     "pages.js",      # static staff and student HTML responses
     "index.js",      # route dispatch and Worker entry point

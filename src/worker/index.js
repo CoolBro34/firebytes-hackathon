@@ -3,6 +3,7 @@ import { json } from './http.js';
 import { storageApi } from './storage.js';
 import { aiHandler } from './ai.js';
 import { mediaHandler, newsletterHandler } from './media.js';
+import { newsletterTranslateHandler } from './translate.js';
 import { alumniSubmit, ALUMNI_PROGRAMS } from './alumni.js';
 import { staffCodeMatches, isPublicApiRequest } from './auth.js';
 import { pageResponse } from './pages.js';
@@ -16,6 +17,7 @@ async function api(request, env, parts) {
   if (parts[0] === "public" && parts[1] === "programs" && method === "GET") return json({ programs: ALUMNI_PROGRAMS });
   if (parts[0] === "alumni" && parts[1] === "submit" && method === "POST") return alumniSubmit(request, env);
   if (method === "POST" && parts[0] === "media" && (parts[1] === "describe" || parts[1] === "transcribe")) return mediaHandler(request, env, parts);
+  if (parts[0] === "newsletter" && parts[1] === "translate" && method === "POST") return newsletterTranslateHandler(request, env);
   if (parts[0] === "newsletter" && method === "POST") return newsletterHandler(request, env);
   return storageApi(request, env, parts);
 }

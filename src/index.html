@@ -505,19 +505,19 @@ const NL = {
     };
   },
   // Email-safe HTML (inline styles) for pasting into Gmail / Mailchimp / any email tool
-  emailHTML(n) {
-    const e = s => esc(s), P = "#0A8F27";
+  emailHTML(n, lang = "en") {
+    const e = s => esc(s), P = "#0A8F27", es = lang === "es";
     return `<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5">
 <div style="display:none;max-height:0;overflow:hidden">${e(n.preheader)}</div>
 <div style="background:${P};color:#fff;padding:22px 24px;border-radius:12px 12px 0 0"><div style="font-size:13px;opacity:.85">${e(ORG.name)}</div><div style="font-size:22px;font-weight:bold">${e(n.subject)}</div></div>
 <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:22px 24px;border-radius:0 0 12px 12px">
 <p style="font-size:16px;margin:0 0 18px">${e(n.intro)}</p>
-${n.sections.map(s => `<h2 style="font-size:18px;color:${P};margin:22px 0 6px">${e(s.heading)}</h2><p style="margin:0 0 8px;font-size:15px">${e(s.body)}</p>${s.link ? `<a href="${e(s.link)}" style="color:${P};font-weight:bold;font-size:14px">See the post &rarr;</a>` : ""}`).join("\n")}
+${n.sections.map(s => `<h2 style="font-size:18px;color:${P};margin:22px 0 6px">${e(s.heading)}</h2><p style="margin:0 0 8px;font-size:15px">${e(s.body)}</p>${s.link ? `<a href="${e(s.link)}" style="color:${P};font-weight:bold;font-size:14px">${es ? "Ver la publicación" : "See the post"} &rarr;</a>` : ""}`).join("\n")}
 <div style="margin-top:26px;padding:16px;background:#F3F3F3;border-radius:0;font-size:16px;font-weight:bold;color:#0A8F27">${e(n.cta)}</div>
-<p style="margin-top:24px;font-size:12px;color:#6b7280">${e(ORG.mission)}<br>You're getting this because your family is part of ${e(ORG.name)}.</p>
+<p style="margin-top:24px;font-size:12px;color:#6b7280">${e(ORG.mission)}${es ? '<br>"El talento está en todas partes, la oportunidad no."' : ""}<br>${es ? "Recibe este correo porque su familia forma parte de Coding in Color." : "You're getting this because your family is part of " + e(ORG.name) + "."}</p>
 </div></div>`;
   },
-  plainText(n) { return [n.subject, "", n.intro, "", ...n.sections.flatMap(s => [s.heading.toUpperCase(), s.body, s.link ? "See the post: " + s.link : "", ""]), n.cta, "", ORG.mission].join("\n"); },
+  plainText(n, lang = "en") { const es = lang === "es"; return [n.subject, "", n.intro, "", ...n.sections.flatMap(s => [s.heading.toUpperCase(), s.body, s.link ? (es ? "Ver la publicación: " : "See the post: ") + s.link : "", ""]), n.cta, "", ORG.mission, ...(es ? ["El talento está en todas partes, la oportunidad no."] : [])].join("\n"); },
   download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 };
 
@@ -577,13 +577,30 @@ async function newsletterView(el, api) {
   };
   const picked = () => [...el.querySelectorAll("input[data-post-id]:checked")].map(box => posts.find(post => post.id === box.dataset.postId)).filter(Boolean);
   const renderResult = async (newsletter, usedPosts, includedAlumni, madeWith) => {
-    const html = NL.emailHTML(newsletter), plain = NL.plainText(newsletter);
-    $$("#nOut").innerHTML = `<div class="card"><div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn primary" id="cHtml">Copy for email</button><button class="btn" id="cText">Copy plain text</button><button class="btn" id="cDl">Download .html</button><button class="btn" id="cMark">Mark posts as sent</button></div><div style="background:#f3f4f6;padding:16px;border-radius:12px">${html}</div><p class="count">Written by ${api.esc(madeWith)}. Review before sending.</p></div>`;
-    await api.create("issue", { subject: newsletter.subject, period: $$("#nPeriod").value, created: d(0), posts: usedPosts.length + includedAlumni.length, madeWith, text: plain });
-    $$("#cHtml").onclick = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plain], { type: "text/plain" }) })]); api.toast("Copied. Paste into Gmail or Mailchimp"); } catch (error) { await navigator.clipboard.writeText(html); api.toast("Copied HTML"); } };
-    $$("#cText").onclick = () => navigator.clipboard.writeText(plain).then(() => api.toast("Copied"));
-    $$("#cDl").onclick = () => NL.download("newsletter-" + d(0) + ".html", `<!doctype html><meta charset="utf-8"><title>${esc(newsletter.subject)}</title><body style="background:#f3f4f6;padding:20px">${html}</body>`);
-    $$("#cMark").onclick = async () => { for (const post of usedPosts) await api.update("post", post.id, { ...post, used: true }); api.toast(`${usedPosts.length} posts marked as sent`); };
+    let edition = newsletter, lang = "en", translated = null, spanishSaved = false, notice = "";
+    const render = () => {
+      const html = NL.emailHTML(edition, lang), plain = NL.plainText(edition, lang);
+      const htmlDoc = `<!doctype html><html lang="${lang}"><meta charset="utf-8"><title>${esc(edition.subject)}</title><body style="background:#f3f4f6;padding:20px">${html}</body></html>`;
+      $$("#nOut").innerHTML = `<div class="card"><div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn" id="langEn" type="button" aria-pressed="${lang === "en"}" style="border-radius:0">English</button><button class="btn" id="langEs" type="button" aria-pressed="${lang === "es"}" style="border-radius:0" ${ai ? "" : 'disabled title="Spanish edition needs Workers AI (live site)"'}>Español</button></div><div id="translateNotice" class="count" aria-live="polite">${notice}</div><div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><button class="btn primary" id="cHtml" title="Pastes formatted into Campaign Monitor, Gmail or any email tool">Copy for Campaign Monitor</button><button class="btn" id="cText">Copy plain text</button><button class="btn" id="cDl">Download .html</button><button class="btn" id="cMark">Mark posts as sent</button></div><div style="background:#f3f4f6;padding:16px;border-radius:12px">${html}</div><p class="count">Written by ${api.esc(lang === "es" ? "Workers AI (Español)" : madeWith)}. Review before sending.</p></div>`;
+      $$("#langEn").onclick = () => { lang = "en"; edition = newsletter; notice = ""; render(); };
+      $$("#langEs").onclick = async () => {
+        if (translated) { edition = translated; lang = "es"; notice = ""; render(); await saveSpanish(); return; }
+        notice = "Traduciendo…"; render(); $$("#langEs").disabled = true;
+        try { translated = await NL.postJSON("/api/newsletter/translate", { newsletter, lang: "es" }); edition = translated; lang = "es"; notice = ""; render(); await saveSpanish(); }
+        catch (error) { notice = `${api.esc(error.message)} <button class="btn" id="translateRetry" type="button">Try again</button>`; render(); $$("#translateRetry").onclick = () => $$("#langEs").click(); }
+      };
+      $$("#cHtml").onclick = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plain], { type: "text/plain" }) })]); api.toast("Copied for your email tool"); } catch (error) { await navigator.clipboard.writeText(html); api.toast("Copied HTML"); } };
+      $$("#cText").onclick = () => navigator.clipboard.writeText(plain).then(() => api.toast("Copied"));
+      $$("#cDl").onclick = () => NL.download("newsletter-" + d(0) + (lang === "es" ? "-es" : "") + ".html", htmlDoc);
+      $$("#cMark").onclick = async () => { for (const post of usedPosts) await api.update("post", post.id, { ...post, used: true }); api.toast(`${usedPosts.length} posts marked as sent`); };
+    };
+    const saveSpanish = async () => {
+      if (!translated || spanishSaved) return;
+      try { await api.create("issue", { subject: translated.subject, period: $$("#nPeriod").value + " (Español)", created: d(0), posts: usedPosts.length + includedAlumni.length, madeWith: "Workers AI (Español)", text: NL.plainText(translated, "es") }); spanishSaved = true; }
+      catch (error) { notice = `Spanish edition is ready; saving failed: ${api.esc(error.message)} <button class="btn" id="translateRetry" type="button">Try again</button>`; render(); $$("#translateRetry").onclick = saveSpanish; }
+    };
+    render();
+    await api.create("issue", { subject: newsletter.subject, period: $$("#nPeriod").value, created: d(0), posts: usedPosts.length + includedAlumni.length, madeWith, text: NL.plainText(newsletter) });
   };
   const build = async useAI => {
     const selected = picked(), includedAlumni = alumni.slice(0, 2);
@@ -723,7 +740,7 @@ const CONFIG = {
         { key: "period", label: "Covers", type: "text" },
         { key: "created", label: "Created", type: "date", default: d(0) },
         { key: "posts", label: "Posts included", type: "number", min: 0 },
-        { key: "madeWith", label: "Written by", type: "select", options: ["Workers AI", "simple template"], badge: true },
+        { key: "madeWith", label: "Written by", type: "select", options: ["Workers AI", "Workers AI (Español)", "simple template"], badge: true },
         { key: "text", label: "Plain-text version", type: "textarea", hideInTable: true }
       ],
       summary: [{ label: "Newsletters made", fn: "count" }],
