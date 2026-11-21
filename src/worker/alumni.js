@@ -5,6 +5,10 @@ import { aiRateLimited } from './ai.js';
 import { b64ToBytes, describeImage } from './media.js';
 
 export const ALUMNI_PROGRAMS = ["AI Academy: Spark", "AI Academy: Amplify", "AI Academy: Reboot", "Hackathons", "Summer Camps", "Other / not sure"];
+/** Age confirmation choices on the student form. Minors need a parent/guardian email so staff can verify permission. */
+export const ALUMNI_AGE_CONFIRM = ["adult", "minor-with-permission"];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export const ALUMNI_NOW_DOING = ["high school", "college / university", "community college", "trade or bootcamp", "internship", "working in tech", "working (other field)", "building my own project", "other"];
 
 /** @param {Request} request @param {object} env @returns {Promise<Response>} Stores only validated fields; the honeypot returns success to avoid signaling bots. */
@@ -30,6 +34,11 @@ export async function alumniSubmit(request, env) {
   if (gradYear && !/^\d{4}$/.test(gradYear)) return json({ error: "Graduation year must be four digits." }, 400);
   if (story.length < 20) return json({ error: "Please share at least 20 characters in your story." }, 400);
   if (link && !/^https:\/\//i.test(link)) return json({ error: "A link must start with https://." }, 400);
+  // Age gate: everyone confirms 18+ or parent/guardian permission; under-18s must give a parent/guardian email.
+  const ageConfirm = text(body.ageConfirm, 40);
+  if (!ALUMNI_AGE_CONFIRM.includes(ageConfirm)) return json({ error: "Please confirm you are 18 or older, or that a parent or guardian said it's OK." }, 400);
+  const parentEmail = ageConfirm === "minor-with-permission" ? text(body.parentEmail, 120).toLowerCase() : "";
+  if (ageConfirm === "minor-with-permission" && !EMAIL_RE.test(parentEmail)) return json({ error: "Please enter your parent or guardian's email address." }, 400);
   let imageNotes = "";
   if (body.image) {
     const bytes = b64ToBytes(body.image);
@@ -47,7 +56,8 @@ export async function alumniSubmit(request, env) {
     id: newId(), submittedAt: new Date().toISOString(), status: "new", firstName,
     programs: [...new Set(programs)].join(", "), yearsAttended, gradYear, nowDoing,
     field, school, story, link, proudOf, imageNotes,
-    consentShare: body.consentShare === true, consentContact: body.consentContact === true
+    consentShare: body.consentShare === true, consentContact: body.consentContact === true,
+    ageConfirm, parentEmail
   };
   if (record.consentContact) record.contact = text(body.contact, 120);
   await save(env, "update", [...await load(env, "update"), record]);

@@ -22,6 +22,7 @@ const env = {
 const noCodeEnv = { DATA: new MemoryKV(), AI: env.AI };
 const image = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x01]).toString("base64");
 const valid = {
+  ageConfirm: "adult",
   firstName: "Taylor Student", programs: ["AI Academy: Spark", "Hackathons"], yearsAttended: "2023-2024",
   gradYear: "2025", nowDoing: "college / university", field: "Computer Science", school: "Arizona State University",
   story: "I am studying computer science and building small projects with what I learned.", link: "https://example.test/project",
