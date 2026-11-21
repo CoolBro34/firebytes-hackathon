@@ -1,163 +1,123 @@
 <!-- TODO before 1:45 PM (submissions close 2:00 PM): paste the video link. -->
 # Coding in Color: Alumni Impact + Family Newsletter
 
-A voluntary alumni update flow helps Coding in Color learn what students do after programs, while staff can review outcomes and prepare a family newsletter from Instagram posts and consented alumni stories.
+**Team:** Pranit (solo)
 
-**Team:** Pranit (solo) · **Nonprofit:** Coding in Color  
-**Student page:** https://coding-in-color.coolpranit2009.workers.dev/  
-**Staff portal:** https://coding-in-color.coolpranit2009.workers.dev/staff · **Demo staff passcode: `testpassword1`** (the live site holds fake demo data only; a real deployment sets its own with `npx wrangler secret put STAFF_CODE`)  
-**Video:** [unlisted YouTube / Drive link]
+**Nonprofit:** Coding in Color, Arizona
+
+**Live app:** [Student page](https://coding-in-color.coolpranit2009.workers.dev/) · [Staff portal](https://coding-in-color.coolpranit2009.workers.dev/staff) (demo staff passcode: `testpassword1`; fake demo data only, and a real deployment sets its own with `npx wrangler secret put STAFF_CODE`)
+
+**Video (3 min):** [unlisted YouTube / Drive link]
+
+**Repository:** [github.com/CoolBro34/firebytes-hackathon](https://github.com/CoolBro34/firebytes-hackathon)
+
+> “Talent is everywhere, opportunity is not.” (Coding in Color)
 
 ## The problem
 
-Coding in Color's #1 issue, shared in person, is that they do not know what students do after they leave, so they cannot show the impact of their programs. Announcements live only on Instagram, so families may miss them. The organization cannot store student data such as names of current students, so an alumni update must be voluntary and collect as little as possible.
+Coding in Color's biggest problem is not knowing what students do after they leave, which makes it hard to show the impact of its programs. Announcements live on Instagram, so families can miss them, and the nonprofit cannot store current students' names. Coding in Color reports 500+ students since 2024 and 80%+ from historically underserved backgrounds.
 
-Coding in Color reports that over 500 students have participated in its programs since 2024 and that more than 80% of participating students are from historically underserved backgrounds. Its home page says: “Talent is everywhere, opportunity is not”.
+## How it works
 
-## What it does
+Former students can voluntarily share an update through the student page. Staff review alumni updates, record anonymous session counts, and turn manually entered Instagram posts into a bilingual family newsletter draft.
 
-- **Alumni share their story:** former students can submit what they are doing now, the programs they attended, and what the program helped with. First name is optional, and the student chooses whether their story may be featured.
-- **Staff review and impact dashboard:** staff can review voluntary updates, see education and career outcomes, and track anonymous session headcounts and return rates.
-- **Instagram posts to newsletter:** staff paste Instagram post details, optionally use AI to read images or transcribe a reel, then combine selected posts with consented alumni spotlights into a newsletter draft. They can make a one-click Spanish edition and copy it for Campaign Monitor, their newsletter tool with a bilingual EN/ES signup form.
-- **Anonymous session headcounts:** staff can record aggregate attendance and returning counts without storing student names.
+![Student story page](screenshots/share.jpg)
 
-### Alumni wall
+![Staff dashboard](screenshots/dashboard.jpg)
 
-The dashboard Alumni wall shows only consented featured/reviewed alumni stories (using consented new updates only when fewer than three approved stories exist). Its dark glass gallery stage uses smaller curved cards and light labels; card art comes from text and never uses photos. The Alumni updates staff page puts the same gallery above the editable table, with All, New, Reviewed, Featured, and Hidden filters and private tags for stories that are not cleared to share. OGL loads from jsDelivr at runtime; reduced motion, unavailable WebGL, or import failures use a static horizontal gallery. Gallery adapted from an open-source CircularGallery component (OGL), ported to vanilla JS.
+Staff can use the dark gold dashboard's live overview and five shortcuts to Alumni, Newsletter, Sessions, Needs attention, and the student page. The consent-only alumni wall uses a WebGL gallery; the Alumni updates page has filters, private tags, and an age column. Newsletter tools can extract text from an Instagram image, transcribe reel audio, write a newsletter with AI, translate it to Spanish, and copy it for Campaign Monitor. Its signup form supports EN/ES.
 
-![Student share page](screenshots/share.jpg)
-![Dashboard](screenshots/dashboard.jpg)
-![Newsletter](screenshots/newsletter.jpg)
+## Tech stack
 
-### Staff portal design
+- Cloudflare Workers serves the pages and API; Workers KV stores records.
+- Workers AI models: `@cf/meta/llama-3.3-70b-instruct-fp8-fast` writes newsletters, translates them, and handles text drafts; `@cf/meta/llama-3.2-11b-vision-instruct` describes images and reads their text; `@cf/openai/whisper-large-v3-turbo` transcribes audio, with `@cf/openai/whisper` as fallback.
+- OGL renders the alumni gallery. The UI is plain HTML, CSS, and JavaScript; it has no framework or UI build step. `npm run dev` bundles the Worker first.
 
-The staff portal uses a dark, dotted background, Playfair Display and Inter typography, glass cards, and a restrained gold palette. Its dashboard centers a live overview node with connected shortcuts for alumni updates, newsletter, sessions, attention items, and the student share page; all existing staff routes remain available in the fixed top navigation.
+## Try it in 2 minutes (for judges)
+
+1. Open the [student page](https://coding-in-color.coolpranit2009.workers.dev/), share a story, and try “under 18” to see the parent-email gate.
+2. Open the [staff portal](https://coding-in-color.coolpranit2009.workers.dev/staff), enter demo passcode `testpassword1`, and see the update reflected in the LIVE overview and Alumni satellite. The demo data is fake.
+3. Open Newsletter, click **✨ Write newsletter with AI**, switch to **Español**, then **Copy for Campaign Monitor**. **Settings → Reset demo data** restores the demo.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Student[Student browser<br/>/ and /share] --> Router[Cloudflare Worker router]
-    Staff[Staff browser<br/>/staff] --> Router
-    Router --> KV[(Workers KV<br/>DATA)]
-    Router --> AI[Workers AI<br/>AI binding]
-    Router --> Pages[Embedded HTML pages]
+    Student[Student page] --> Worker[Cloudflare Worker router]
+    Staff[Staff portal] --> Worker
+    Worker --> KV[(Workers KV)]
+    Worker --> AI[Workers AI]
 ```
 
-The Worker serves both HTML pages and all API endpoints from one deployment. The student browser posts a voluntary form to the Worker; the Worker validates it, optionally sends a photo to Workers AI for a description, then stores the update in KV. The staff browser uses the same Worker API to read and edit records, and the newsletter workflow sends selected content to the AI endpoint. The single Worker keeps routing, passcode enforcement, validation, AI calls, and KV access on the server while avoiding a separate backend service.
+The Worker serves the student and staff HTML pages and routes API requests. Public submissions are validated by the Worker; an optional photo is sent to image description and only the resulting text can be stored. Staff API requests use the shared passcode when `STAFF_CODE` is configured. Entity records are stored as JSON arrays in KV; AI receives bounded text and media inputs for the relevant action.
+
+## API reference
+
+With `STAFF_CODE` configured, routes marked **Staff** require the `x-staff-code` header. Otherwise the demo API is unlocked. Same-origin checks apply to AI/media/newsletter and alumni submission routes when an `Origin` header is present. `OPTIONS` returns the Worker CORS preflight response.
+
+| Method | Route | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/capabilities` | Public | Report configured storage, AI, media, and staff lock. |
+| GET | `/api/ping` | Public | Check KV availability. |
+| GET | `/api/public/programs` | Public | Return allowed alumni program names. |
+| POST | `/api/alumni/submit` | Public | Submit a voluntary alumni update; requires age confirmation (18+ or parent/guardian permission), and a parent email for under-18 submitters. |
+| POST | `/api/ai` | Staff | Generate one of the allowlisted text drafts. |
+| POST | `/api/media/describe` | Staff | Describe an image and extract readable text. |
+| POST | `/api/media/transcribe` | Staff | Transcribe audio. |
+| POST | `/api/newsletter` | Staff | Draft a newsletter from 1–12 supplied posts. |
+| POST | `/api/newsletter/translate` | Staff | Translate a newsletter into Spanish and preserve its links. |
+| GET, POST | `/api/<entity>` | Staff | List or create records for an entity. |
+| GET, PUT, DELETE | `/api/<entity>/<id>` | Staff | Read, update, or delete one record. |
+| GET | `/api/_export` | Staff | Export all entity arrays. |
+| POST | `/api/_reset` | Staff | Replace stored entity arrays. |
+
+The Worker also responds to `GET` and `HEAD` for `/` and `/share` with the student page, and `/staff` with the staff app. Unknown API routes return not found; unsupported methods return method not allowed.
+
+## Data and privacy
+
+| Entity | Stored in KV |
+|---|---|
+| `update` | Submission time and status; optional first name, alumni program and outcome details, story and links; consent flags; parent email only for under-18 submissions; contact only when contact consent is selected; optional AI image description. |
+| `post` | Manually entered post title, date, kind, link, caption, image notes, transcript, and used flag. |
+| `session` | Date, program, aggregate headcount and returning count, families count, and optional notes. |
+| `issue` | Newsletter subject, period, creation time, post count, source label, and newsletter text. |
+
+The app never stores photos, audio, or names of current students. Alumni first name is optional. Parent email is collected only for under-18 submitters and is visible to staff. Consent flags control public wall and newsletter inclusion; staff review status also filters what appears on the wall. The shared staff passcode is a Cloudflare secret. The public form has a honeypot, and AI-backed routes use same-origin checks and a best-effort rate limit when KV is available. Prompts tell models to treat submitted records as data, not instructions.
 
 ## Project structure
 
 ```text
 .
-├── build/
-│   ├── apply_preset.py       # Replaces the staff app CONFIG block with a preset
-│   └── build_worker.py       # Bundles Worker modules and HTML into worker.js
-├── docs/
-│   └── CONTRIBUTING.md       # Notes for extending routes and presets
-├── src/
-│   ├── index.html            # Generic config-driven staff application
-│   ├── share.html            # Public alumni story form
-│   ├── presets/              # Configurations (starter presets are examples; Coding in Color uses its own)
-│   │   ├── bakery_demo.js     # Starter bakery example
-│   │   ├── clients.js         # Starter client tracker
-│   │   ├── coding_in_color.js # Active Coding in Color configuration and gallery
-│   │   ├── directory.js       # Starter directory example
-│   │   ├── donors.js          # Starter donor tracker
-│   │   ├── events.js          # Starter event tracker
-│   │   ├── pantry.js          # Starter pantry example
-│   │   └── volunteers.js      # Starter volunteer tracker
-│   └── worker/
-│       ├── ai.js             # Allowlisted drafts and rate limiting
-│       ├── alumni.js         # Public catalog and alumni submissions
-│       ├── auth.js           # Staff lock and public route allowlist
-│       ├── http.js           # Shared response/body/validation helpers
-│       ├── index.js          # Worker router and entry point
-│       ├── media.js          # Image, audio and newsletter AI routes
-│       ├── pages.js          # Embedded HTML page responses
-│       └── storage.js        # KV and generic entity API
-├── tests/
-│   ├── run_all.mjs           # Runs every test suite in child processes
-│   ├── test_attention.mjs    # Needs-attention behavior
-│   ├── test_t2_ai_actions.mjs # Allowlisted AI actions
-│   ├── test_t3_media.mjs     # Media and newsletter API
-│   └── test_t5_alumni.mjs    # Alumni submission and staff lock
-├── screenshots/              # Share page, dashboard and newsletter captures
-│   ├── dashboard.jpg         # Staff impact dashboard capture
-│   ├── newsletter.jpg        # Newsletter builder capture
-│   └── share.jpg            # Student share page capture
-├── .gitignore                # Local secrets, builds and scratch files
-├── LICENSE                   # MIT license
-├── package.json              # Build, test, dev and deploy scripts
-├── wrangler.toml             # Worker bindings and model configuration
-└── worker.js                 # Generated single-file Cloudflare Worker
+├── src/index.html                 # Staff portal shell and application
+├── src/share.html                 # Public alumni submission page
+├── src/presets/coding_in_color.js # Active preset, views, and OGL gallery
+├── src/presets/                   # Other reusable starter presets
+├── src/worker/index.js            # Router and API auth gate
+├── src/worker/alumni.js           # Public program list and alumni submission
+├── src/worker/ai.js               # Allowlisted text drafts and rate limit
+├── src/worker/auth.js             # Staff passcode and public route list
+├── src/worker/http.js             # JSON, body, ID, and validation helpers
+├── src/worker/media.js            # Image, audio, and newsletter generation
+├── src/worker/pages.js            # HTML page responses
+├── src/worker/storage.js          # KV entity CRUD, export, and reset
+├── src/worker/translate.js        # Spanish newsletter translation
+├── tests/run_all.mjs              # Runs each test suite
+├── tests/test_attention.mjs       # Needs-attention behavior
+├── tests/test_t2_ai_actions.mjs   # Allowlisted text drafting
+├── tests/test_t3_media.mjs        # Media and newsletter API
+├── tests/test_t5_alumni.mjs       # Alumni submission and staff lock
+├── tests/test_t8_gallery.mjs      # Consent-aware gallery behavior
+├── tests/test_t9_translate.mjs    # Newsletter translation
+├── tests/test_t11_staff_ui.mjs    # Staff portal UI behavior
+├── tests/test_t13_age.mjs         # Age confirmation and parent email
+├── screenshots/share.jpg          # Current student page screenshot
+├── screenshots/dashboard.jpg      # Current dashboard screenshot
+├── build/build_worker.py          # Bundles Worker and embedded pages
+├── package.json                   # Build, dev, deploy, and test scripts
+├── wrangler.toml                  # Worker bindings and configuration
+├── LICENSE                        # MIT license
+└── worker.js                      # Generated Worker bundle
 ```
-
-## API reference
-
-When `STAFF_CODE` is configured, every API route requires the `x-staff-code` header except the routes marked **public** below. Without that secret, the API remains open as in the demo. `OPTIONS` requests return the existing permissive CORS preflight response.
-
-| Method | Path | Auth | Request | Success | Common errors |
-|---|---|---|---|---|---|
-| `GET` | `/api/capabilities` | Public | — | `{storage, ai, media, staffLock}` | — |
-| `GET` | `/api/ping` | Public | — | `{ok:true}` | `404` if KV is not bound |
-| `GET` | `/api/public/programs` | Public | — | `{programs:[...]}` | — |
-| `POST` | `/api/alumni/submit` | Public | Voluntary alumni fields described below; optional base64 image | `{ok:true}` | `400` invalid form, `403` foreign Origin, `429` rate limit, `502` image AI failure, `503` no KV |
-| `POST` | `/api/ai` | Staff | `{action, record, org?}`; action must be allowlisted | `{text}` | `400` unknown action, `403` foreign Origin, `404` no AI, `429` limit, `502` AI failure/empty response |
-| `POST` | `/api/media/describe` | Staff | `{image}` base64 or data URL | `{description, text_in_image}` | `400` invalid body/image, `403` foreign Origin, `404` no AI, `413` image over 2 MB, `429` limit, `502` AI failure |
-| `POST` | `/api/media/transcribe` | Staff | `{audio}` base64 or data URL | `{text}` | `400` invalid body/audio, `403` foreign Origin, `404` no AI, `413` audio over 8 MB, `429` limit, `502` AI failure |
-| `POST` | `/api/newsletter` | Staff | `{org?, period?, posts:[{date,caption,imageNotes,transcript,link}]}`; 1–12 posts | `{subject,preheader,intro,sections,cta}` | `400` invalid/empty/over-limit posts, `403` foreign Origin, `404` no AI, `429` limit, `502` invalid output or AI failure |
-| `POST` | `/api/newsletter/translate` | Staff | `{newsletter:{subject,preheader,intro,sections:[{heading,body,link}],cta},lang:"es"}` | Translated newsletter with original section links reattached | `400` invalid body/language, `403` foreign Origin, `404` no AI, `429` limit, `502` invalid output or AI failure |
-| `GET` | `/api/<entity>` | Staff | — | Array of records; empty array if missing | `404` if KV is not bound or entity path is invalid |
-| `POST` | `/api/<entity>` | Staff | JSON object | Created record with generated `id` (`201`) | `400` invalid JSON or configured required field, `404` no KV |
-| `GET` | `/api/<entity>/<id>` | Staff | — | Record | `404` no KV or record missing |
-| `PUT` | `/api/<entity>/<id>` | Staff | JSON object merged into record | Updated record | `400` invalid JSON or configured required field, `404` no KV or record missing |
-| `DELETE` | `/api/<entity>/<id>` | Staff | — | `{ok:true}` | `404` no KV or record missing |
-| `GET` | `/api/_export` | Staff | — | Object keyed by entity, each value an array | `404` if KV is not bound |
-| `POST` | `/api/_reset` | Staff | Object mapping entity names to arrays | `{ok:true}` after replacing all entity keys | `400` body is not an object, `404` if KV is not bound |
-
-Unknown API methods return `405`; the outer Worker catches unexpected API errors and returns `{error:"Server error"}` with status `500`. Any non-API `GET` or `HEAD` serves the share page at `/` and `/share`, and the staff app for `/staff` and the existing fallback paths. Other non-API methods return `405`.
-
-`POST /api/alumni/submit` accepts required `programs` (one to six names from the public catalog), `nowDoing` (one of the page's choices), and `story` (20–1,200 characters). Optional fields are `firstName` (up to 40 characters), `yearsAttended` (20), a four-digit `gradYear`, `field` and `school` (80 each), an HTTPS `link` (300), `proudOf` (300), and a JPEG/PNG `image` (up to 2 MB decoded). `consentShare` and `consentContact` default to false; `contact` (up to 120 characters) is stored only when contact consent is true. A non-empty `website` honeypot receives `{ok:true}` and stores nothing.
-
-## Data model
-
-Worker KV stores one JSON array per entity under `e:<entity>`:
-
-- **`post`:** `id`, `title`, `date`, `kind`, `link`, `caption`, `imageNotes`, `transcript`, and `used`.
-- **`session`:** `id`, `date`, `program`, `headcount`, `returning`, `families`, and optional aggregate `notes`. No student names belong in notes.
-- **`issue`:** `id`, `subject`, `period`, `created`, `posts` count, `madeWith`, and plain-text newsletter `text`.
-- **`update`:** `id`, `submittedAt`, `status`, optional first name, programs, years attended, graduation year, current activity, field, school/organization, story, link, proud-of note, consent flags, and optional contact. Optional photo descriptions are saved as `imageNotes`.
-
-Program form input is validated against the Worker program list; submitted program names are stored as a comma-joined string. The system never stores raw images or audio. First name is optional and limited to one name token. Contact is kept only when `consentContact` is true. Demo records are fabricated examples, not real student data.
-
-## AI pipeline
-
-AI is optional and runs inside the Worker:
-
-- **Image descriptions:** `@cf/meta/llama-3.2-11b-vision-instruct` (or `VISION_MODEL`). The Worker calls the model with a text prompt and an `image_url` whose URL is a `data:image/jpeg;base64,...` or PNG data URL inside the user message content. Raw photo bytes are not written to KV.
-- **Reel transcription:** `@cf/openai/whisper-large-v3-turbo` (or `WHISPER_MODEL`), with a fallback to `@cf/openai/whisper` using a byte array if the first call fails.
-- **Newsletter writing:** `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (or `NEWSLETTER_MODEL`) receives bounded post fields and a fixed system prompt and returns structured newsletter JSON.
-- **Newsletter translation:** Workers AI receives bounded newsletter text without links; the Worker reattaches the original links server-side by section index.
-- **Allowlisted drafts:** `/api/ai` accepts only the fixed action definitions in `AI_ACTIONS` (including summaries, reminders, donor updates, check-ins and alumni spotlights). Its Worker AI model uses `AI_MODEL`; `wrangler.toml` sets this to `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. The retired `llama-3.1-8b` is not the configured model.
-
-Prompts are fixed in the Worker and say record content is data, not instructions. Records, organization fields, posts, and output sizes are clamped; newsletter output is parsed and shape-checked before returning. AI endpoints share a best-effort limit of 10 requests per minute per IP when KV is bound. If AI is unavailable, the newsletter UI offers a simple non-AI draft from saved captions and featured alumni stories; the AI endpoints return an error when unavailable.
-
-The text-draft route also retains the starter's optional Anthropic fallback: if the Workers AI binding is absent and `ANTHROPIC_API_KEY` is configured, `/api/ai` uses `AI_MODEL` or `claude-haiku-5-5`. This fallback is separate from the Workers AI vision, transcription, and newsletter routes.
-
-## Security and privacy
-
-- Configure the shared staff passcode as a Worker secret with `npx wrangler secret put STAFF_CODE`; never place it in source code. The hackathon demo passcode is published above on purpose so judges can open the staff portal; the demo holds only fake data, and any real deployment must set a new secret. Comparisons loop over all character positions. The public exceptions are `GET /api/capabilities`, `GET /api/ping`, `GET /api/public/programs`, and `POST /api/alumni/submit`.
-- AI and media routes reject a mismatched `Origin` header. The alumni endpoint also checks `Origin`; absence of the header is permitted.
-- The alumni form validates selected programs, required story length, activity choice, HTTPS links, and optional photo type/size. The hidden `website` honeypot returns success without storing anything.
-- Alumni updates are voluntary and consent-based. Name is optional; there is no required full name, email, or phone. Newsletter spotlights require both `consentShare` and staff review status `featured`, and use first name only.
-- Photos are resized in the browser, optionally sent for an AI description, and discarded. Audio used for transcription is sent to the Worker and is not stored by the app.
-
-## Configuration
-
-`wrangler.toml` sets `main = "worker.js"`, the KV binding `DATA`, the Workers AI binding `AI`, and `AI_MODEL`. Configure `STAFF_CODE` with Wrangler Secrets when the portal should be locked. Do not add a secret value to `wrangler.toml`.
-
-`src/presets/` contains reusable starter examples and the `coding_in_color.js` configuration. That preset defines the organization details, program names, theme, entities, fake demo rows, attention rules, and newsletter view. Apply it with `python3 build/apply_preset.py src/presets/coding_in_color.js`; the script replaces only the marked CONFIG block in `src/index.html`. Rebuild after changing the preset or either HTML page.
 
 ## Run, test, deploy
 
@@ -171,19 +131,19 @@ npx wrangler secret put STAFF_CODE
 npm run deploy
 ```
 
-The namespace ID created by Wrangler must be added to `wrangler.toml` under `[[kv_namespaces]]` before deploy. Cloudflare dashboard deployments can instead use the generated `worker.js`. To reset the current demo data, open **Settings → Reset demo data** in the staff portal.
+Set the KV namespace ID created by Wrangler in `wrangler.toml`. The demo passcode above is for fake demo data; real deployments set their own `STAFF_CODE` secret.
 
 ## How we built it
 
-The project started from Pranit's generic, config-driven starter template prepared before the event. The Coding in Color alumni share flow, public submission API, staff passcode lock, impact dashboard, consolidated staff views, image descriptions, reel transcription, newsletter workflow and documentation were built for this project. Claude acted as architect and reviewer, and Codex acted as builder through the JSON task protocol in `.agents/`. Each task was reviewed and tested; existing test suites remain unchanged.
+We started from Pranit's pre-event config-driven starter template. We spoke with the nonprofit in person and pivoted to the problem it identified. Claude served as architect and reviewer; Codex built tasks specced in the JSON task protocol, then Claude reviewed and tested them, catching several bugs. The gallery adapts an open-source CircularGallery OGL component, ported to vanilla JavaScript.
 
 ## Status
 
-**Finished:** voluntary alumni updates; consent-aware review and featuring; outcome dashboard; anonymous session headcounts; Instagram post entry; optional AI image descriptions and reel transcription; AI-assisted newsletter drafts with a simple fallback; Spanish edition (Workers AI, verified live); CSV tools and KV export/reset.
+**Finished:** voluntary alumni updates with consent controls; staff review and dashboard; anonymous session headcounts; manual Instagram post entry; image text/description and reel transcription; AI newsletter drafts, Spanish translation, and Campaign Monitor copy workflow.
 
-**Mocked up:** demo posts, sessions and alumni records are fake; there is no real student outcome data in this repository. AI drafts need staff review.
+**Mocked/demo:** all included records are fake. Instagram posts are pasted, not imported automatically. Newsletter drafts are copied into Campaign Monitor, not sent. Parent permission is self-reported and the email is collected, not verified. Staff share one passcode rather than using individual accounts.
 
-**Next:** Instagram posts are pasted, not auto-pulled (automatic import needs a Meta Graph API token); newsletters are copied into the nonprofit's email tool, not sent; staff use a shared passcode rather than per-user accounts; possible next steps are Graph API import, email sending, and individual staff logins.
+**Next:** Instagram Graph API import, Campaign Monitor API sending, per-staff logins, parent email verification, and more languages.
 
 ## License
 
