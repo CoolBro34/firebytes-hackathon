@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Coding with Color</title>
+<title>Coding in Color</title>
 <!--
   ╔══════════════════════════════════════════════════════════════════════════╗
   ║  SMALL-BUSINESS STARTER  —  one file, zero dependencies, works offline   ║
@@ -151,180 +151,237 @@ td.num,th.num{text-align:right}
    Entity options: label, singular, icon, titleField, fields[], seed[], summary[], charts[], rowClass(rec), attentionReason(rec)
    ============================================================================ */
 /*==CONFIG:START==*/
-// PRESET: Coding with Color — student engagement + donor impact. ALL people and schools below are FAKE demo data.
+// PRESET: Coding in Color — Instagram posts -> family newsletter, plus anonymous retention tracking.
+// No student names or personal data are stored anywhere (the org can't keep student data). All demo content is FAKE.
 const d = n => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); }; // date n days from today
-const HOURS_PER_SESSION = 2;     // each class session is 2 hours
-const PERIOD = "Fall 2026";      // label used on the donor report
-const PROGRAMS = ["Intro to Web Dev", "Python Foundations", "Game Design", "App Lab"];
+const ORG = { name: "Coding in Color", mission: "Talent is everywhere. Accessibility isn't. We make coding accessible to K-12 students of color." };
+const PROGRAMS = ["Saturday Code Club", "Girls Who Game", "Teen Web Lab"];
 const pct = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : "");
-const daysSince = date => (date ? Math.round((new Date(d(0) + "T00:00:00") - new Date(date + "T00:00:00")) / 86400000) : "");
-const growth = r => (r.skillNow !== "" && r.skillStart !== "" && r.skillNow != null && r.skillStart != null ? Number(r.skillNow) - Number(r.skillStart) : "");
-// Risk rules (one place, used by flags, reasons and the report): active students only
-const risk = r => {
-  if (r.status !== "active") return "";
-  const rate = pct(r.sessionsAttended, r.sessionsOffered), away = daysSince(r.lastSession);
-  if ((away !== "" && away >= 14) || (rate !== "" && rate < 60)) return "flag-bad";
-  if ((away !== "" && away >= 7) || (rate !== "" && rate < 75)) return "flag-warn";
-  return "";
-};
 const avg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-const round1 = x => Math.round(x * 10) / 10;
-// Impact numbers, computed from the student list (shared by dashboard cards and donor report)
-const impact = rows => {
-  const served = rows.length, active = rows.filter(r => r.status === "active").length;
-  const kept = rows.filter(r => r.status === "active" || r.status === "graduated").length;
-  const rates = rows.map(r => pct(r.sessionsAttended, r.sessionsOffered)).filter(x => x !== "");
-  const growths = rows.map(growth).filter(x => x !== "");
-  return {
-    studentsServed: served, activeStudents: active,
-    retentionRate: served ? Math.round((kept / served) * 100) : 0,
-    avgAttendance: Math.round(avg(rates)),
-    learningHours: rows.reduce((s, r) => s + Number(r.sessionsAttended || 0) * HOURS_PER_SESSION, 0),
-    avgSkillGrowth: round1(avg(growths)),
-    projectsShipped: rows.reduce((s, r) => s + Number(r.projects || 0), 0),
-    atRisk: rows.filter(r => risk(r) === "flag-bad").length
-  };
+
+/* ---------- small helpers for the newsletter tools (browser side; AI itself runs on the Cloudflare Worker) ---------- */
+const NL = {
+  async postJSON(path, body) {
+    const r = await fetch(CONFIG.apiBase + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "Request failed (" + r.status + ")");
+    return j;
+  },
+  async caps() { try { const r = await fetch(CONFIG.apiBase + "/api/capabilities"); return r.ok ? await r.json() : {}; } catch (e) { return {}; } },
+  bytesToB64(bytes) { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); },
+  // Shrink an image to max 1024px JPEG so it uploads fast
+  async imageToB64(file) {
+    const bmp = await createImageBitmap(file), k = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.85).split(",")[1];
+  },
+  // Pull the audio out of a reel/video, keep the first 2 minutes, convert to 16 kHz mono WAV for speech-to-text
+  async videoToWavB64(file) {
+    const buf = await file.arrayBuffer(), ctx = new AudioContext();
+    const audio = await ctx.decodeAudioData(buf); ctx.close();
+    const secs = Math.min(audio.duration, 120), rate = 16000;
+    const off = new OfflineAudioContext(1, Math.ceil(secs * rate), rate), src = off.createBufferSource();
+    src.buffer = audio; src.connect(off.destination); src.start(0, 0, secs);
+    const pcm = (await off.startRendering()).getChannelData(0);
+    const out = new DataView(new ArrayBuffer(44 + pcm.length * 2)), w = (o, s) => [...s].forEach((ch, i) => out.setUint8(o + i, ch.charCodeAt(0)));
+    w(0, "RIFF"); out.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt "); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+    out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, "data"); out.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 0x7fff, true);
+    return NL.bytesToB64(new Uint8Array(out.buffer));
+  },
+  // No-AI fallback: a simple newsletter straight from the post captions
+  simple(posts, period) {
+    return {
+      subject: `What's new at ${ORG.name}: ${period}`.slice(0, 60),
+      preheader: `${posts.length} update${posts.length === 1 ? "" : "s"} from our Instagram, in one place`,
+      intro: `Here's everything we shared on Instagram for ${period}, in one quick read. Thanks for being part of our community!`,
+      sections: posts.slice(0, 5).map(p => ({ heading: p.title || "Update", body: (p.caption || p.imageNotes || "").slice(0, 500), link: p.link || "" })),
+      cta: "We'd love to see you at the next session. Bring a friend!"
+    };
+  },
+  // Email-safe HTML (inline styles) for pasting into Gmail / Mailchimp / any email tool
+  emailHTML(n) {
+    const e = s => esc(s), P = "#7c3aed";
+    return `<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5">
+<div style="display:none;max-height:0;overflow:hidden">${e(n.preheader)}</div>
+<div style="background:${P};color:#fff;padding:22px 24px;border-radius:12px 12px 0 0"><div style="font-size:13px;opacity:.85">${e(ORG.name)}</div><div style="font-size:22px;font-weight:bold">${e(n.subject)}</div></div>
+<div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:22px 24px;border-radius:0 0 12px 12px">
+<p style="font-size:16px;margin:0 0 18px">${e(n.intro)}</p>
+${n.sections.map(s => `<h2 style="font-size:18px;color:${P};margin:22px 0 6px">${e(s.heading)}</h2><p style="margin:0 0 8px;font-size:15px">${e(s.body)}</p>${s.link ? `<a href="${e(s.link)}" style="color:${P};font-weight:bold;font-size:14px">See the post &rarr;</a>` : ""}`).join("\n")}
+<div style="margin-top:26px;padding:16px;background:#f5f3ff;border-radius:10px;font-size:16px;font-weight:bold;color:#3b0764">${e(n.cta)}</div>
+<p style="margin-top:24px;font-size:12px;color:#6b7280">${e(ORG.mission)}<br>You're getting this because your family is part of ${e(ORG.name)}.</p>
+</div></div>`;
+  },
+  plainText(n) { return [n.subject, "", n.intro, "", ...n.sections.flatMap(s => [s.heading.toUpperCase(), s.body, s.link ? "See the post: " + s.link : "", ""]), n.cta, "", ORG.mission].join("\n"); },
+  download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 };
 
 const CONFIG = {
-  appName: "Coding with Color", tagline: "Every student seen. Every win counted.", logo: "🎨",
+  appName: "Coding in Color", tagline: "Talent is everywhere. Accessibility isn't.", logo: "🎨",
   theme: "ocean", customTheme: { "--primary": "#7c3aed", "--side": "#1e1b4b", "--side-text": "#ddd6fe" },
   currency: "$", storage: "auto", apiBase: "",
 
   entities: {
-    student: {
-      label: "Students", singular: "Student", icon: "🧑🏾‍💻", titleField: "name",
+    post: {
+      label: "Instagram posts", singular: "Post", icon: "📸", titleField: "title",
       fields: [
-        { key: "name", label: "Student (first name + initial)", type: "text", required: true, placeholder: "e.g. Amara T." },
-        { key: "program", label: "Program", type: "select", options: PROGRAMS, badge: true, default: PROGRAMS[0] },
-        { key: "grade", label: "Grade", type: "select", options: ["6-8", "9-10", "11-12", "College"], default: "9-10" },
-        { key: "status", label: "Status", type: "select", options: ["active", "paused", "graduated", "withdrew"], badge: true, default: "active" },
-        { key: "joined", label: "Joined", type: "date", default: d(0), hideInTable: true },
-        { key: "sessionsOffered", label: "Sessions held", type: "number", default: 0, min: 0, hideInTable: true },
-        { key: "sessionsAttended", label: "Sessions attended", type: "number", default: 0, min: 0, hideInTable: true },
-        { key: "attendance", label: "Attendance %", type: "computed", format: "number", compute: r => pct(r.sessionsAttended, r.sessionsOffered) },
-        { key: "lastSession", label: "Last session", type: "date" },
-        { key: "daysAway", label: "Days since", type: "computed", format: "number", compute: r => (r.status === "active" ? daysSince(r.lastSession) : "") },
-        { key: "skillStart", label: "Skill at start (1-5)", type: "number", min: 1, default: 1, hideInTable: true },
-        { key: "skillNow", label: "Skill now (1-5)", type: "number", min: 1, default: 1, hideInTable: true },
-        { key: "growth", label: "Skill growth", type: "computed", format: "number", compute: growth },
-        { key: "projects", label: "Projects", type: "number", default: 0, min: 0 },
-        { key: "mentor", label: "Mentor", type: "text" },
-        { key: "notes", label: "Notes", type: "textarea", hideInTable: true }
+        { key: "title", label: "Short title", type: "text", required: true, placeholder: "e.g. Spring sign-ups open" },
+        { key: "date", label: "Posted", type: "date", default: d(0) },
+        { key: "kind", label: "Type", type: "select", options: ["event", "sign-up", "showcase", "news", "reminder"], badge: true, default: "news" },
+        { key: "link", label: "Instagram link", type: "text", placeholder: "https://instagram.com/p/...", hideInTable: true },
+        { key: "caption", label: "Caption", type: "textarea" },
+        { key: "imageNotes", label: "From the images (AI)", type: "textarea", hideInTable: true },
+        { key: "transcript", label: "Said in the reel (AI)", type: "textarea", hideInTable: true },
+        { key: "used", label: "In a newsletter", type: "checkbox" }
       ],
-      rowClass: risk,
-      attentionReason: r => {
-        const rate = pct(r.sessionsAttended, r.sessionsOffered), away = daysSince(r.lastSession), bits = [];
-        if (away !== "" && away >= 7) bits.push(`${away} days since last session`);
-        if (rate !== "" && rate < 75) bits.push(`${rate}% attendance`);
-        return bits.join(" · ");
-      },
-      aiActions: [{ id: "checkin", label: "✨ Check-in text" }],
+      rowClass: r => (!r.used && r.date && r.date <= d(-14) && (r.kind === "event" || r.kind === "sign-up")) ? "flag-warn" : "",
+      attentionReason: () => "event/sign-up post from 2+ weeks ago that never went out in a newsletter",
       summary: [
-        { label: "Students served", fn: "count", hint: PERIOD },
-        { label: "Retention %", fn: "custom", compute: rows => impact(rows).retentionRate, hint: "still active or graduated" },
-        { label: "Avg attendance %", fn: "custom", compute: rows => impact(rows).avgAttendance, hint: "sessions attended ÷ held" },
-        { label: "Learning hours", fn: "custom", compute: rows => impact(rows).learningHours, hint: `${HOURS_PER_SESSION} h per session attended` },
-        { label: "Avg skill growth", fn: "custom", compute: rows => impact(rows).avgSkillGrowth, hint: "levels gained on a 1-5 scale" },
-        { label: "At risk now", fn: "custom", compute: rows => impact(rows).atRisk, hint: "14+ days away or under 60%" }
+        { label: "Posts waiting", fn: "countIf", test: r => !r.used, hint: "not in a newsletter yet" }
       ],
-      charts: [
-        { title: "Students by program", type: "bar", groupBy: "program" },
-        { title: "Student status", type: "doughnut", groupBy: "status" }
-      ],
+      charts: [{ title: "Posts by type", type: "doughnut", groupBy: "kind" }],
       seed: [
-        { name: "Amara T.", program: "Intro to Web Dev", grade: "9-10", status: "active", joined: d(-70), sessionsOffered: 20, sessionsAttended: 19, lastSession: d(-2), skillStart: 1, skillNow: 4, projects: 5, mentor: "Ms. Okafor", notes: "Built a portfolio site for her mom's braiding business." },
-        { name: "Jaylen M.", program: "Python Foundations", grade: "11-12", status: "active", joined: d(-70), sessionsOffered: 20, sessionsAttended: 11, lastSession: d(-19), skillStart: 2, skillNow: 3, projects: 2, mentor: "Mr. Reyes", notes: "Started a part-time job on Thursdays." },
-        { name: "Sofia R.", program: "Game Design", grade: "6-8", status: "active", joined: d(-63), sessionsOffered: 18, sessionsAttended: 17, lastSession: d(-2), skillStart: 1, skillNow: 3, projects: 4, mentor: "Dev P." },
-        { name: "Kwame A.", program: "App Lab", grade: "College", status: "active", joined: d(-56), sessionsOffered: 16, sessionsAttended: 12, lastSession: d(-9), skillStart: 3, skillNow: 4, projects: 3, mentor: "Ms. Okafor" },
-        { name: "Priya N.", program: "Python Foundations", grade: "9-10", status: "graduated", joined: d(-120), sessionsOffered: 24, sessionsAttended: 23, lastSession: d(-30), skillStart: 1, skillNow: 5, projects: 7, mentor: "Mr. Reyes", notes: "Now a teaching assistant for the next cohort." },
-        { name: "Marcus L.", program: "Intro to Web Dev", grade: "11-12", status: "active", joined: d(-70), sessionsOffered: 20, sessionsAttended: 10, lastSession: d(-5), skillStart: 1, skillNow: 2, projects: 1, mentor: "Dev P." },
-        { name: "Imani W.", program: "Game Design", grade: "9-10", status: "active", joined: d(-63), sessionsOffered: 18, sessionsAttended: 16, lastSession: d(-2), skillStart: 2, skillNow: 4, projects: 4, mentor: "Dev P." },
-        { name: "Diego H.", program: "App Lab", grade: "College", status: "withdrew", joined: d(-56), sessionsOffered: 8, sessionsAttended: 4, lastSession: d(-35), skillStart: 2, skillNow: 2, projects: 0, mentor: "Ms. Okafor", notes: "Moved out of state." },
-        { name: "Aaliyah B.", program: "Intro to Web Dev", grade: "6-8", status: "active", joined: d(-70), sessionsOffered: 20, sessionsAttended: 18, lastSession: d(-2), skillStart: 1, skillNow: 3, projects: 3, mentor: "Ms. Okafor" },
-        { name: "Tyrese J.", program: "Python Foundations", grade: "11-12", status: "active", joined: d(-70), sessionsOffered: 20, sessionsAttended: 14, lastSession: d(-8), skillStart: 1, skillNow: 3, projects: 2, mentor: "Mr. Reyes" },
-        { name: "Mei L.", program: "Game Design", grade: "6-8", status: "graduated", joined: d(-120), sessionsOffered: 24, sessionsAttended: 22, lastSession: d(-28), skillStart: 1, skillNow: 4, projects: 6, mentor: "Dev P." },
-        { name: "Andre K.", program: "App Lab", grade: "College", status: "active", joined: d(-56), sessionsOffered: 16, sessionsAttended: 15, lastSession: d(-2), skillStart: 2, skillNow: 4, projects: 3, mentor: "Ms. Okafor" },
-        { name: "Zara O.", program: "Python Foundations", grade: "9-10", status: "paused", joined: d(-70), sessionsOffered: 20, sessionsAttended: 9, lastSession: d(-21), skillStart: 1, skillNow: 2, projects: 1, mentor: "Mr. Reyes", notes: "Family emergency; plans to return in spring." },
-        { name: "Nia C.", program: "Intro to Web Dev", grade: "9-10", status: "active", joined: d(-42), sessionsOffered: 12, sessionsAttended: 6, lastSession: d(-16), skillStart: 1, skillNow: 2, projects: 1, mentor: "Dev P." },
-        { name: "Elijah S.", program: "Game Design", grade: "11-12", status: "active", joined: d(-63), sessionsOffered: 18, sessionsAttended: 15, lastSession: d(-2), skillStart: 2, skillNow: 4, projects: 3, mentor: "Dev P." },
-        { name: "Luz M.", program: "App Lab", grade: "11-12", status: "active", joined: d(-56), sessionsOffered: 16, sessionsAttended: 14, lastSession: d(-2), skillStart: 1, skillNow: 3, projects: 2, mentor: "Ms. Okafor" }
+        { title: "Spring session sign-ups open", date: d(-3), kind: "sign-up", link: "https://instagram.com/p/demo1", caption: "Spring Saturday Code Club sign-ups are OPEN! 🎉 Free for K-12 students. Laptops provided, no experience needed. Link in bio to register. Spots are limited!", imageNotes: "A colorful flyer announcing spring sign-ups. Text in image: SPRING CODE CLUB · SATURDAYS 10AM-12PM · FREE · LAPTOPS PROVIDED", transcript: "", used: false },
+        { title: "Game showcase recap", date: d(-6), kind: "showcase", link: "https://instagram.com/p/demo2", caption: "So proud of our Girls Who Game crew 💜 Twelve original games built in six weeks and presented to families last Friday. Thank you to everyone who came out!", imageNotes: "Students presenting games on laptops to a room of families; a projector screen shows a pixel-art platform game.", transcript: "We started with zero lines of code and now we have twelve games. My favorite part was seeing families play them.", used: false },
+        { title: "No class Thanksgiving weekend", date: d(-1), kind: "reminder", link: "https://instagram.com/p/demo3", caption: "Reminder: no Saturday Code Club on Nov 28 for Thanksgiving weekend. See you Dec 5! 🦃", imageNotes: "Text graphic. Text in image: NO CLASS NOV 28 · BACK DEC 5", transcript: "", used: false },
+        { title: "Teen Web Lab field trip", date: d(-17), kind: "event", link: "https://instagram.com/p/demo4", caption: "Teen Web Lab is visiting a local tech office on Dec 12! Permission slips due Dec 5. Ask your mentor for a copy.", imageNotes: "Flyer with a city skyline. Text in image: FIELD TRIP DEC 12 · SLIPS DUE DEC 5", transcript: "", used: false },
+        { title: "Volunteer mentors wanted", date: d(-24), kind: "news", link: "https://instagram.com/p/demo5", caption: "Know a software developer who loves to teach? We're looking for volunteer mentors for 2 hours on Saturdays.", imageNotes: "", transcript: "", used: true }
       ]
     },
-    story: {
-      label: "Impact stories", singular: "Story", icon: "💬", titleField: "student",
+    session: {
+      label: "Sessions", singular: "Session", icon: "🗓️", titleField: "program",
       fields: [
-        { key: "student", label: "Student (first name + initial)", type: "text", required: true },
+        { key: "date", label: "Date", type: "date", default: d(0), required: true },
         { key: "program", label: "Program", type: "select", options: PROGRAMS, badge: true, default: PROGRAMS[0] },
-        { key: "quote", label: "Quote", type: "textarea", required: true },
-        { key: "project", label: "Project it's about", type: "text" },
-        { key: "consent", label: "Family OK'd sharing with donors", type: "checkbox" },
-        { key: "date", label: "Date", type: "date", default: d(0) }
+        { key: "headcount", label: "Students (count only)", type: "number", min: 0, default: 0, required: true },
+        { key: "returning", label: "Of those, came last time", type: "number", min: 0, default: 0 },
+        { key: "returnRate", label: "Returning %", type: "computed", format: "number", compute: r => pct(r.returning, r.headcount) },
+        { key: "families", label: "Families/parents present", type: "number", min: 0, default: 0 },
+        { key: "notes", label: "Notes (no names)", type: "textarea", hideInTable: true }
       ],
-      rowClass: r => (r.consent ? "" : "flag-warn"),
-      attentionReason: () => "needs sharing consent before it can go in the donor report",
+      rowClass: r => { const p = pct(r.returning, r.headcount); return p === "" ? "" : p < 50 ? "flag-bad" : p < 70 ? "flag-warn" : ""; },
+      attentionReason: r => `${fmt.date(r.date)}: only ${pct(r.returning, r.headcount)}% came back from the previous session`,
+      summary: [
+        { label: "Avg students / session", fn: "custom", compute: rows => Math.round(avg(rows.map(r => Number(r.headcount) || 0))), hint: "headcounts only, no names stored" },
+        { label: "Returning %", fn: "custom", compute: rows => { const h = rows.reduce((s, r) => s + Number(r.headcount || 0), 0); return pct(rows.reduce((s, r) => s + Number(r.returning || 0), 0), h) || 0; }, hint: "students who also came last time" },
+        { label: "Family visits", fn: "sum", field: "families", hint: "parents & guardians at sessions" }
+      ],
+      charts: [{ title: "Sessions logged by program", type: "bar", groupBy: "program" }],
       seed: [
-        { student: "Amara T.", program: "Intro to Web Dev", quote: "I used to think coding was for other people. Now my mom's business has a website and I made it.", project: "Braiding studio website", consent: true, date: d(-6) },
-        { student: "Priya N.", program: "Python Foundations", quote: "I came in not knowing what a variable was. Now I'm helping teach the new cohort.", project: "Bus-time text bot", consent: true, date: d(-30) },
-        { student: "Sofia R.", program: "Game Design", quote: "My little brother plays my game every day. He wants to join next year.", project: "Desert runner game", consent: false, date: d(-3) }
+        { date: d(-28), program: "Saturday Code Club", headcount: 24, returning: 19, families: 6 },
+        { date: d(-21), program: "Saturday Code Club", headcount: 21, returning: 16, families: 4 },
+        { date: d(-14), program: "Saturday Code Club", headcount: 17, returning: 11, families: 3 },
+        { date: d(-7), program: "Saturday Code Club", headcount: 15, returning: 7, families: 2, notes: "Lower turnout; the schedule change was only posted on Instagram." },
+        { date: d(-25), program: "Girls Who Game", headcount: 12, returning: 11, families: 5 },
+        { date: d(-18), program: "Girls Who Game", headcount: 12, returning: 11, families: 4 },
+        { date: d(-11), program: "Girls Who Game", headcount: 13, returning: 12, families: 14, notes: "Showcase night!" },
+        { date: d(-20), program: "Teen Web Lab", headcount: 9, returning: 7, families: 1 },
+        { date: d(-13), program: "Teen Web Lab", headcount: 8, returning: 6, families: 0 },
+        { date: d(-6), program: "Teen Web Lab", headcount: 7, returning: 5, families: 1 }
       ]
+    },
+    issue: {
+      label: "Newsletters", singular: "Newsletter", icon: "📰", titleField: "subject",
+      fields: [
+        { key: "subject", label: "Subject", type: "text", required: true },
+        { key: "period", label: "Covers", type: "text" },
+        { key: "created", label: "Created", type: "date", default: d(0) },
+        { key: "posts", label: "Posts included", type: "number", min: 0 },
+        { key: "madeWith", label: "Written by", type: "select", options: ["Workers AI", "simple template"], badge: true },
+        { key: "text", label: "Plain-text version", type: "textarea", hideInTable: true }
+      ],
+      summary: [{ label: "Newsletters made", fn: "count" }],
+      seed: []
     }
   },
 
   extraViews: [
     {
-      id: "attendance", label: "Take attendance", icon: "✅",
+      id: "addpost", label: "Add IG post", icon: "➕",
       async render(el, api) {
-        const all = await api.list("student"), active = all.filter(s => s.status === "active");
-        const progs = PROGRAMS.filter(p => active.some(s => s.program === p));
-        el.innerHTML = `<h1>✅ Take attendance</h1><p class="sub">One tap per student. Updates attendance %, last session, and the risk flags.</p>
-          <div class="card"><label>Program <select id="prog">${progs.map(p => `<option>${api.esc(p)}</option>`).join("")}</select></label>
-          <div id="roster" style="margin:14px 0"></div><button class="btn primary" id="saveAtt">Save today's session</button></div>`;
-        const draw = () => {
-          const p = el.querySelector("#prog").value;
-          el.querySelector("#roster").innerHTML = active.filter(s => s.program === p).map(s =>
-            `<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><input type="checkbox" data-id="${api.esc(s.id)}" checked> <b>${api.esc(s.name)}</b> <span class="count">${api.esc(pct(s.sessionsAttended, s.sessionsOffered))}% so far</span></label>`).join("") || '<div class="empty">No active students in this program</div>';
+        const caps = await NL.caps(), ai = !!caps.media;
+        el.innerHTML = `<h1>➕ Add an Instagram post</h1>
+          <p class="sub">Paste the caption, drop in the photos and/or the reel. ${ai ? "Cloudflare Workers AI reads the text in the images, describes them, and transcribes the reel." : "AI extraction runs on the live site (Cloudflare Workers AI). Here you can still type notes yourself."}</p>
+          <div class="card" style="display:grid;gap:12px;max-width:760px">
+            <label>Short title <input id="pTitle" placeholder="e.g. Spring sign-ups open" style="width:100%"></label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap"><label>Posted <input id="pDate" type="date" value="${d(0)}"></label>
+              <label>Type <select id="pKind">${["event", "sign-up", "showcase", "news", "reminder"].map(k => `<option>${k}</option>`).join("")}</select></label>
+              <label style="flex:1;min-width:220px">Instagram link <input id="pLink" placeholder="https://instagram.com/p/..." style="width:100%"></label></div>
+            <label>Caption <textarea id="pCap" rows="4" style="width:100%" placeholder="Paste the post caption"></textarea></label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap"><label>Photos / flyers <input id="pImgs" type="file" accept="image/*" multiple></label>
+              <label>Reel / video <input id="pVid" type="file" accept="video/*,audio/*"></label></div>
+            ${ai ? '<button class="btn" id="pRun">✨ Read images &amp; reel with AI</button>' : ""}
+            <div id="pLog" class="count"></div>
+            <label>From the images <textarea id="pImgNotes" rows="3" style="width:100%"></textarea></label>
+            <label>Said in the reel <textarea id="pTrans" rows="3" style="width:100%"></textarea></label>
+            <div><button class="btn primary" id="pSave">Save post</button></div>
+          </div>`;
+        const $$ = s => el.querySelector(s), log = m => { $$("#pLog").textContent = m; };
+        if (ai) $$("#pRun").onclick = async () => {
+          const imgs = [...$$("#pImgs").files], vid = $$("#pVid").files[0], notes = [];
+          if (!imgs.length && !vid) return api.toast("Add a photo or a reel first", true);
+          $$("#pRun").disabled = true;
+          try {
+            for (let i = 0; i < imgs.length; i++) {
+              log(`Reading image ${i + 1} of ${imgs.length}…`);
+              const r = await NL.postJSON("/api/media/describe", { image: await NL.imageToB64(imgs[i]) });
+              notes.push([r.description, r.text_in_image ? "Text in image: " + r.text_in_image : ""].filter(Boolean).join(" "));
+            }
+            if (notes.length) $$("#pImgNotes").value = notes.join("\n");
+            if (vid) {
+              log("Pulling the audio out of the reel…"); const wav = await NL.videoToWavB64(vid);
+              log("Transcribing the reel…"); $$("#pTrans").value = (await NL.postJSON("/api/media/transcribe", { audio: wav })).text;
+            }
+            log("Done. Check the text below, edit anything, then save.");
+          } catch (e) { log("⚠️ " + e.message + " (you can still type the notes yourself)"); }
+          $$("#pRun").disabled = false;
         };
-        el.querySelector("#prog").onchange = draw; draw();
-        el.querySelector("#saveAtt").onclick = async () => {
-          const p = el.querySelector("#prog").value, boxes = [...el.querySelectorAll("#roster input[data-id]")];
-          let here = 0;
-          for (const b of boxes) {
-            const s = active.find(x => x.id === b.dataset.id), came = b.checked;
-            const upd = { ...s, sessionsOffered: Number(s.sessionsOffered || 0) + 1, sessionsAttended: Number(s.sessionsAttended || 0) + (came ? 1 : 0) };
-            if (came) { upd.lastSession = d(0); here++; }
-            await api.update("student", s.id, upd);
-          }
-          api.toast(`Saved: ${here} of ${boxes.length} present in ${p}`);
-          location.hash = "#/dashboard";
+        $$("#pSave").onclick = async () => {
+          const cap = $$("#pCap").value.trim(), title = $$("#pTitle").value.trim() || cap.split(/[.!?\n]/)[0].slice(0, 60);
+          if (!title && !cap) return api.toast("Add a caption or a title", true);
+          await api.create("post", { title: title || "Instagram post", date: $$("#pDate").value, kind: $$("#pKind").value, link: $$("#pLink").value.trim(),
+            caption: cap, imageNotes: $$("#pImgNotes").value.trim(), transcript: $$("#pTrans").value.trim(), used: false });
+          api.toast("Post saved"); location.hash = "#/x/newsletter";
         };
       }
     },
     {
-      id: "report", label: "Donor report", icon: "📈",
+      id: "newsletter", label: "Newsletter", icon: "📰",
       async render(el, api) {
-        const rows = await api.list("student"), stories = (await api.list("story")).filter(s => s.consent);
-        const m = impact(rows);
-        const big = (v, label) => `<div class="card stat"><div class="value">${api.esc(v)}</div><div class="label">${api.esc(label)}</div></div>`;
-        const byProg = PROGRAMS.map(p => { const r = rows.filter(s => s.program === p); return [p, r.length, impact(r)]; }).filter(x => x[1]);
-        el.innerHTML = `<div class="toolbar noprint" style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="aiUpd" hidden>✨ Draft donor update</button><button class="btn primary" onclick="print()">Print / save PDF</button></div>
-          <h1>Coding with Color: ${api.esc(PERIOD)} impact</h1>
-          <p class="sub">${api.esc(m.studentsServed)} young coders of color, ${api.esc(m.learningHours)} hours of hands-on learning. Live numbers from our program records.</p>
-          <div class="grid stats">${big(m.studentsServed, "students served")}${big(m.retentionRate + "%", "retention")}${big(m.avgAttendance + "%", "average attendance")}${big(m.learningHours, "learning hours")}${big("+" + m.avgSkillGrowth, "avg skill levels gained (1-5)")}${big(m.projectsShipped, "projects shipped")}</div>
-          <div class="card"><h3>By program</h3><table><thead><tr><th class="noclick">Program</th><th class="noclick num">Students</th><th class="noclick num">Retention</th><th class="noclick num">Attendance</th><th class="noclick num">Skill growth</th><th class="noclick num">Projects</th></tr></thead>
-          <tbody>${byProg.map(([p, n, x]) => `<tr><td>${api.esc(p)}</td><td class="num">${n}</td><td class="num">${x.retentionRate}%</td><td class="num">${x.avgAttendance}%</td><td class="num">+${x.avgSkillGrowth}</td><td class="num">${x.projectsShipped}</td></tr>`).join("")}</tbody></table></div>
-          <div class="card" style="margin-top:14px"><h3>In their words</h3>${stories.length ? stories.map(s => `<blockquote style="margin:12px 0;padding-left:14px;border-left:4px solid var(--primary)">“${api.esc(s.quote)}”<br><span class="count">One ${api.esc(s.program)} student${s.project ? " · " + api.esc(s.project) : ""}</span></blockquote>`).join("") : '<div class="empty">No stories with family consent yet</div>'}</div>
-          <p class="count" style="margin-top:14px">Student names are never shown to donors. Stories appear only with family consent.</p>`;
-        // Optional AI draft (runs on the Cloudflare Worker; button only shows when AI is enabled there)
-        if (Store.ai) {
-          const b = el.querySelector("#aiUpd"); b.hidden = false;
-          b.onclick = () => {
-            const record = { period: PERIOD, studentsServed: m.studentsServed, activeStudents: m.activeStudents, retentionRate: m.retentionRate, avgAttendance: m.avgAttendance,
-              learningHours: m.learningHours, avgSkillGrowth: m.avgSkillGrowth, projectsShipped: m.projectsShipped, programs: byProg.map(x => x[0]).join(", "), story: stories[0] ? stories[0].quote : "" };
-            const fake = { aiActions: [{ id: "donor_update", label: "✨ Donor update draft" }] };
-            CONFIG.entities._report = fake; runAI("_report", "donor_update", record); delete CONFIG.entities._report;
-          };
-        }
+        const caps = await NL.caps(), ai = !!caps.media;
+        const posts = (await api.list("post")).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        const month = new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
+        el.innerHTML = `<h1>📰 Build this month's newsletter</h1>
+          <p class="sub">Families miss Instagram posts. Pick the posts, and ${ai ? "Workers AI" : "the template"} turns them into one email they'll actually read.</p>
+          <div class="card"><div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:10px"><label>Covers <input id="nPeriod" value="${api.esc(month)}"></label>
+            <button class="btn primary" id="nGo">${ai ? "✨ Write newsletter with AI" : "Build newsletter"}</button>${ai ? '<button class="btn" id="nSimple">Simple version (no AI)</button>' : ""}</div>
+            ${posts.length ? `<table><tbody>${posts.map(p => `<tr><td style="width:30px"><input type="checkbox" data-id="${api.esc(p.id)}" ${p.used ? "" : "checked"}></td><td><b>${api.esc(p.title)}</b><div class="count">${api.esc(api.fmt.date(p.date))} · ${api.esc(p.kind || "")}${p.used ? " · already sent" : ""}</div></td></tr>`).join("")}</tbody></table>` : '<div class="empty">No posts yet. Add one first.</div>'}</div>
+          <div id="nOut" style="margin-top:16px"></div>`;
+        const $$ = s => el.querySelector(s);
+        const picked = () => [...el.querySelectorAll("input[data-id]:checked")].map(b => posts.find(p => p.id === b.dataset.id)).filter(Boolean);
+        const show = async (n, chosen, madeWith) => {
+          const html = NL.emailHTML(n), text = NL.plainText(n);
+          $$("#nOut").innerHTML = `<div class="card"><div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button class="btn primary" id="cHtml">Copy for email</button><button class="btn" id="cText">Copy plain text</button><button class="btn" id="cDl">Download .html</button><button class="btn" id="cMark">Mark posts as sent</button></div>
+            <div style="background:#f3f4f6;padding:16px;border-radius:12px">${html}</div><p class="count">Written by ${api.esc(madeWith)}. Review before sending.</p></div>`;
+          await api.create("issue", { subject: n.subject, period: $$("#nPeriod").value, created: d(0), posts: chosen.length, madeWith, text });
+          $$("#cHtml").onclick = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]); api.toast("Copied. Paste into Gmail or Mailchimp"); } catch (e) { await navigator.clipboard.writeText(html); api.toast("Copied HTML"); } };
+          $$("#cText").onclick = () => navigator.clipboard.writeText(text).then(() => api.toast("Copied"));
+          $$("#cDl").onclick = () => NL.download("newsletter-" + d(0) + ".html", `<!doctype html><meta charset="utf-8"><title>${esc(n.subject)}</title><body style="background:#f3f4f6;padding:20px">${html}</body>`);
+          $$("#cMark").onclick = async () => { for (const p of chosen) await api.update("post", p.id, { ...p, used: true }); api.toast(`${chosen.length} posts marked as sent`); };
+        };
+        const build = async useAI => {
+          const chosen = picked(); if (!chosen.length) return api.toast("Pick at least one post", true);
+          if (!useAI) return show(NL.simple(chosen, $$("#nPeriod").value), chosen, "simple template");
+          $$("#nOut").innerHTML = '<div class="card"><p class="count">✨ Workers AI is reading the posts and writing your newsletter…</p></div>';
+          try {
+            const n = await NL.postJSON("/api/newsletter", { org: ORG, period: $$("#nPeriod").value,
+              posts: chosen.slice(0, 12).map(p => ({ date: p.date || "", caption: p.caption || p.title || "", imageNotes: p.imageNotes || "", transcript: p.transcript || "", link: p.link || "" })) });
+            show(n, chosen, "Workers AI");
+          } catch (e) { $$("#nOut").innerHTML = `<div class="card"><p style="color:var(--danger)">${api.esc(e.message)}</p><p class="count">Tip: try again, or use the simple version.</p></div>`; }
+        };
+        if (posts.length) { $$("#nGo").onclick = () => build(ai); if (ai) $$("#nSimple").onclick = () => build(false); }
       }
     }
   ]
@@ -722,8 +779,8 @@ async function viewSettings() {
 /* ---------- Router ---------- */
 function buildNav() {
   const items = [{ id: "dashboard", label: "Dashboard", icon: "📊" }]
-    .concat(Object.entries(CONFIG.entities).map(([k, e]) => ({ id: k, label: e.label, icon: e.icon || "•" })))
-    .concat((CONFIG.extraViews || []).map(v => ({ id: "x/" + v.id, label: v.label, icon: v.icon || "•" })));
+    .concat((CONFIG.extraViews || []).map(v => ({ id: "x/" + v.id, label: v.label, icon: v.icon || "•" })))
+    .concat(Object.entries(CONFIG.entities).map(([k, e]) => ({ id: k, label: e.label, icon: e.icon || "•" })));
   $("#nav").innerHTML = items.map(i => `<a href="#/${i.id}" data-id="${i.id}"><span>${i.icon}</span>${esc(i.label)}</a>`).join("") + `<div class="sep"></div><a href="#/settings" data-id="settings"><span>⚙️</span>Settings</a>`;
 }
 async function route() {
