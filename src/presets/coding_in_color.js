@@ -301,6 +301,65 @@ function excerpt(text, limit = 110) {
   return value.length > limit ? value.slice(0, limit - 1).trimEnd() + "…" : value;
 }
 
+
+function codingColorDashboardHero(data) {
+  const updates = data.update || [], sessions = data.session || [], posts = data.post || [];
+  const newest = (a, b) => (Date.parse(b.submittedAt || b.date || "") || 0) - (Date.parse(a.submittedAt || a.date || "") || 0);
+  const consented = updates.filter(row => row.consentShare === true).slice().sort(newest);
+  const latestStory = consented[0], waiting = posts.filter(row => !row.used), recentPost = posts.slice().sort(newest)[0];
+  const newUpdates = updates.filter(row => row.status === "new");
+  const active = updates.filter(row => ["college / university", "community college", "internship", "working in tech", "working (other field)"].includes(row.nowDoing));
+  const alumniRate = updates.length ? Math.round(active.length / updates.length * 100) : 0;
+  const heads = sessions.reduce((sum, row) => sum + Number(row.headcount || 0), 0), returning = sessions.reduce((sum, row) => sum + Number(row.returning || 0), 0);
+  const returningRate = heads ? Math.round(returning / heads * 100) : 0;
+  const lowSession = sessions.slice().sort((a, b) => (Number(a.headcount) ? Number(a.returning) / Number(a.headcount) : 0) - (Number(b.headcount) ? Number(b.returning) / Number(b.headcount) : 0))[0];
+  const attention = [];
+  for (const [name, entity] of Object.entries(CONFIG.entities)) for (const row of data[name] || []) {
+    try { if (typeof entity.rowClass === "function" && ["flag-bad", "flag-warn"].includes(entity.rowClass(row))) attention.push({ title: row[entity.titleField] || entity.titleFallback || "Update" }); } catch (e) { }
+  }
+  const weekAgo = Date.now() - 7 * 86400000, updatesThisWeek = updates.filter(row => (Date.parse(row.submittedAt || "") || 0) >= weekAgo).length;
+  const stat = (value, label) => `<div class="core-metric"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
+  const satellite = (klass, href, label, title, note, target = "") => `<a class="neural-satellite ${klass}" href="${href}" ${target} aria-label="${esc(label + ": " + title)}"><div class="sat-title">${esc(label)}</div><div class="sat-value">${esc(title)}</div><div class="sat-note">${esc(note)}</div></a>`;
+  return `<section class="neural-hero" aria-label="Coding in Color staff overview"><div class="neural-stage" id="neuralStage">
+    <svg class="neural-lines" id="neuralLines" aria-hidden="true" focusable="false"><defs><linearGradient id="nodeGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c9b8a0" stop-opacity=".9"/><stop offset="100%" stop-color="#a78b71" stop-opacity=".1"/></linearGradient></defs>${["alumni", "newsletter", "sessions", "attention", "student"].map(id => `<path class="node-line" data-node="${id}"/><path class="node-line flow" data-node="${id}"/>`).join("")}</svg>
+    <div class="live-notice"><span class="live-pill"><i class="live-dot" aria-hidden="true"></i><b class="live-word">LIVE</b><span>${newUpdates.length} new alumni update${newUpdates.length === 1 ? "" : "s"} to review</span></span></div>
+    ${satellite("sat-1", "#/update", "Alumni updates", latestStory ? `${latestStory.firstName ? String(latestStory.firstName).split(/\s+/)[0] : "Alum"} · ${latestStory.status || "shared"}` : "Your alumni stories", latestStory ? excerpt(latestStory.story, 72) : "Review voluntary stories from the community.")}
+    ${satellite("sat-2", "#/x/newsletter", "Newsletter", `${waiting.length} posts waiting`, recentPost ? `Latest: ${excerpt(recentPost.title, 64)}` : "Build a family update from your posts.")}
+    ${satellite("sat-3", "#/session", "Sessions", `${returningRate}% returning`, lowSession ? `Focus: ${excerpt(lowSession.program, 32)} · ${pct(lowSession.returning, lowSession.headcount) || 0}%` : "Log anonymous headcounts and return rates.")}
+    ${satellite("sat-4", "#attention", "Needs attention", `${attention.length} item${attention.length === 1 ? "" : "s"}`, attention[0] ? `Next: ${excerpt(attention[0].title, 54)}` : "No items need follow-up right now.")}
+    ${satellite("sat-5", "/", "Student share page", "Share your story", `${updatesThisWeek} update${updatesThisWeek === 1 ? "" : "s"} this week`, 'target="_blank" rel="noopener"')}
+    <div class="neural-core" id="neuralCore" aria-label="Live overview summary"><span class="badge demo-chip" title="${esc(CONFIG.demoNotice || "Staff overview")}">Demo data</span><div class="core-label">CODING IN COLOR · LIVE OVERVIEW</div><div class="core-metrics">${stat(updates.length, "alumni updates")}${stat(alumniRate + "%", "college or working")}${stat(returningRate + "%", "returning students")}${stat(waiting.length, "posts waiting")}</div></div>
+  </div><h1 class="hero-headline">Every student's <span class="gold">story</span>,<br>all in <span class="gold">one place</span>.</h1><div class="hero-ctas"><a class="cta-outline" href="#/update">Review alumni updates</a><a class="cta-solid" href="#/x/newsletter">Build the newsletter</a></div></section>`;
+}
+
+function wireDashboardNeuralLines() {
+  const stage = document.querySelector("#neuralStage"), core = document.querySelector("#neuralCore"), svg = document.querySelector("#neuralLines");
+  if (!stage || !core || !svg) return;
+  const update = () => {
+    const bounds = stage.getBoundingClientRect(), center = core.getBoundingClientRect();
+    svg.setAttribute("viewBox", `0 0 ${Math.round(bounds.width)} ${Math.round(bounds.height)}`);
+    const cx = center.left + center.width / 2 - bounds.left, cy = center.top + center.height / 2 - bounds.top;
+    stage.querySelectorAll(".neural-satellite").forEach(card => {
+      const label = card.getAttribute("aria-label") || "", target = label.startsWith("Alumni") ? "alumni" : label.startsWith("Newsletter") ? "newsletter" : label.startsWith("Sessions") ? "sessions" : label.startsWith("Needs") ? "attention" : "student";
+      const box = card.getBoundingClientRect(), x = box.left + box.width / 2 - bounds.left, y = box.top + box.height / 2 - bounds.top;
+      const dx = x - cx, dy = y - cy, bend = Math.max(36, Math.min(110, Math.abs(dx) * .24));
+      const d = `M ${cx} ${cy} C ${cx + (dx < 0 ? -bend : bend)} ${cy + dy * .12}, ${x - (dx < 0 ? -bend : bend)} ${y - dy * .12}, ${x} ${y}`;
+      stage.querySelectorAll(`.node-line[data-node="${target}"]`).forEach(path => path.setAttribute("d", d));
+    });
+  };
+  let frame = 0;
+  const schedule = () => { if (frame) cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { frame = 0; update(); }); };
+  const spaceToActivate = event => { if (event.key === " ") { event.preventDefault(); event.currentTarget.click(); } };
+  const satellites = [...stage.querySelectorAll(".neural-satellite")];
+  satellites.forEach(card => card.addEventListener("keydown", spaceToActivate));
+  const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+  if (observer) observer.observe(stage);
+  window.addEventListener("resize", schedule);
+  const onVisibility = () => stage.classList.toggle("is-paused", document.hidden);
+  document.addEventListener("visibilitychange", onVisibility); onVisibility(); update();
+  return () => { if (frame) cancelAnimationFrame(frame); observer && observer.disconnect(); satellites.forEach(card => card.removeEventListener("keydown", spaceToActivate)); window.removeEventListener("resize", schedule); document.removeEventListener("visibilitychange", onVisibility); };
+}
+
 // The generic dashboard is engine-owned, so add this preset card only after its charts exist.
 function watchDashboardForAlumniWall() {
   const dashboard = document.querySelector("#main");
@@ -316,13 +375,14 @@ function watchDashboardForAlumniWall() {
     const subline = document.createElement("p"); subline.className = "sub"; subline.textContent = "Consented stories from former students. Drag or scroll to explore.";
     const host = document.createElement("div"); host.id = "alumniWall"; host.className = "cic-wall-host";
     host.tabIndex = 0; host.setAttribute("role", "region"); host.setAttribute("aria-label", "Alumni wall, use left and right arrow keys");
-    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#111;padding:24px"; host.appendChild(loading);
+    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#ddd;padding:24px"; host.appendChild(loading);
     const review = document.createElement("p"); review.style.margin = "12px 0 0";
     const link = document.createElement("a"); link.href = "#/update"; link.textContent = "Review all alumni updates →"; review.appendChild(link);
     section.append(styles, heading, subline, host, review);
-    dashboard.insertBefore(section, stats);
-    const wall = GALLERY.create(host, { bend: 3.5, textColor: "#111", borderRadius: 0.08, font: "500 26px Poppins, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03 });
-    window._cleanup = wall.destroy;
+    dashboard.insertBefore(section, dashboard.querySelector("#charts"));
+    const wall = GALLERY.create(host, { bend: 3.5, textColor: "#f5f2ee", borderRadius: 0.08, font: "500 26px Inter, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03 });
+    const priorCleanup = window._cleanup;
+    window._cleanup = () => { if (priorCleanup) priorCleanup(); wall.destroy(); };
     Store.list("update").then(updates => wall.mount(updates)).catch(() => wall.mount([]));
   };
   const observer = new MutationObserver(addWall);
@@ -335,7 +395,7 @@ function renderStaffAlumniGallery(name, main, api) {
   if (name !== "update") return;
   ensureWallCSS();
   const styles = document.createElement("style");
-  styles.textContent = ".cic-staff-gallery{margin:0 0 18px}.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}.cic-gallery-filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.cic-gallery-filters button{border:0;background:#F3F3F3;color:#111;border-radius:0;padding:8px 14px;cursor:pointer}.cic-gallery-filters button[aria-pressed=true]{background:#0A8F27;color:#fff}.cic-open-story{margin-top:10px}@media(max-width:640px){.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}}";
+  styles.textContent = ".cic-staff-gallery{margin:0 0 18px}.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}.cic-gallery-filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.cic-gallery-filters button{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#eee;border-radius:12px;padding:8px 14px;cursor:pointer}.cic-gallery-filters button[aria-pressed=true]{background:#a78b71;color:#0a0a0a}.cic-open-story{margin-top:10px}@media(max-width:640px){.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}}";
   const section = document.createElement("section"); section.className = "cic-staff-gallery";
   const pageHeading = main.querySelector("h1"); if (pageHeading) pageHeading.textContent = "Alumni updates";
   const filters = document.createElement("div"); filters.className = "cic-gallery-filters"; filters.setAttribute("role", "group"); filters.setAttribute("aria-label", "Filter alumni updates");
@@ -349,7 +409,7 @@ function renderStaffAlumniGallery(name, main, api) {
     const items = staffGalleryItems(updates, filter);
     wall = GALLERY.create(host, {
       items: rows => staffGalleryItems(rows, filter), emptyMessage: "No alumni updates match this filter.", srLabel: "Alumni updates including private stories",
-      bend: 3.5, textColor: "#111", borderRadius: 0.08, font: "500 26px Poppins, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03,
+      bend: 3.5, textColor: "#f5f2ee", borderRadius: 0.08, font: "500 26px Inter, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03,
       onOpen: item => item && api.openForm("update", item.record, async () => { updates = await api.list("update"); show(); })
     });
     wall.mount(updates);
@@ -365,7 +425,7 @@ function renderStaffAlumniGallery(name, main, api) {
 }
 
 /* Shared gallery CSS, injected once into <head> so every page that mounts a gallery gets the base layout. */
-const WALL_BASE_CSS = ".cic-wall-host{position:relative;height:380px;background:#F3F3F3;box-shadow:0 40px 100px rgba(0,0,0,.05);overflow:hidden;border-radius:40px}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:14px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(25vw,210px);margin:0;scroll-snap-align:center;color:#111;text-align:center;font:500 26px Poppins,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:8px;box-shadow:0 16px 32px rgba(0,0,0,.12)}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#111;text-align:center;padding:80px 18px;margin:0;font:400 15px Poppins,Arial,sans-serif}.cic-wall-empty a{color:#0A8F27;font-weight:500;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:280px;border-radius:28px}.cic-wall-figure{flex-basis:42vw;font-size:16px}}";
+const WALL_BASE_CSS = ".cic-wall-host{position:relative;height:380px;background:#151412;box-shadow:0 40px 100px rgba(0,0,0,.35);overflow:hidden;border-radius:40px}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:14px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(25vw,210px);margin:0;scroll-snap-align:center;color:#f5f2ee;text-align:center;font:500 26px Inter,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:8px;box-shadow:0 16px 32px rgba(0,0,0,.12)}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#f5f2ee;text-align:center;padding:80px 18px;margin:0;font:400 15px Inter,Arial,sans-serif}.cic-wall-empty a{color:#e8d5b7;font-weight:600;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:280px;border-radius:28px}.cic-wall-figure{flex-basis:42vw;font-size:16px}}";
 function ensureWallCSS() {
   if (document.getElementById("cic-wall-css")) return;
   const tag = document.createElement("style"); tag.id = "cic-wall-css"; tag.textContent = WALL_BASE_CSS; document.head.appendChild(tag);
@@ -541,9 +601,11 @@ const CONFIG = {
   // Shown as a "Demo data" badge on the dashboard so judges know the numbers are fictional sample data. Set to "" for real use.
   demoNotice: "All students, sessions and posts here are fictional sample data.",
   appName: "Coding in Color", tagline: "Talent is everywhere, opportunity is not.", logo: "‹IN›",
-  theme: "ocean", customTheme: { "--primary": "#0A8F27", "--side": "#000000", "--side-text": "#e5e5e5" },
+  theme: "ocean", customTheme: { "--primary": "#a78b71", "--side": "#0a0a0a", "--side-text": "#f5f2ee" },
   currency: "$", storage: "auto", apiBase: "", navEntities: ["update", "session"], navOrder: ["dashboard", "update", "x/newsletter", "session"],
   entityViewHook: renderStaffAlumniGallery,
+  dashboardHero: codingColorDashboardHero,
+  dashboardAfterRender: wireDashboardNeuralLines,
 
   entities: {
     // Instagram source material. Unsent older events/sign-ups are flagged for staff attention.
@@ -627,6 +689,9 @@ const CONFIG = {
         { key: "canFeature", label: "Can feature", type: "computed", compute: r => r.consentShare ? "yes" : "no" },
         { key: "consentContact", label: "Contact consent", type: "checkbox" },
         { key: "contact", label: "Contact (consent only)", type: "text", hideInTable: true },
+        // Age gate from the student form: "adult" (18+) or "minor-with-permission" (under 18, parent/guardian OK).
+        { key: "ageConfirm", label: "Age", type: "select", options: ["adult", "minor-with-permission"], badge: true, default: "adult" },
+        { key: "parentEmail", label: "Parent/guardian email (under 18)", type: "email", hideInTable: true },
         { key: "submittedAt", label: "Submitted", type: "text" }
       ],
       // Risk rule: all newly submitted alumni updates are queued for staff review.
@@ -641,14 +706,14 @@ const CONFIG = {
       ],
       charts: [{ title: "Where alumni are now", type: "doughnut", groupBy: "nowDoing" }, { title: "Updates by program", type: "bar", groupBy: "programs", splitComma: true }],
       seed: [
-        { firstName: "Alex", programs: "AI Academy: Spark", yearsAttended: "2022-2023", gradYear: "2025", nowDoing: "college / university", field: "Computer Science", school: "Arizona State University", story: "Studying computer science at Arizona State University and gaining confidence by building projects.", link: "", proudOf: "Starting a computer science degree", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-30) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Sam", programs: "Hackathons, AI Academy: Spark", yearsAttended: "2023-2024", gradYear: "2024", nowDoing: "community college", field: "Information Technology", school: "Maricopa Community Colleges", story: "Taking information technology classes at a Maricopa community college and practicing with small projects.", link: "", proudOf: "Keeping up with college coursework", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-25) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Jordan", programs: "Summer Camps", yearsAttended: "2021-2022", gradYear: "2023", nowDoing: "internship", field: "Software development", school: "Phoenix technology company", story: "Completed an internship with a Phoenix technology company and learned how a software team works together.", link: "", proudOf: "Contributing to a team project", imageNotes: "", status: "reviewed", consentShare: false, consentContact: false, submittedAt: new Date(d(-22) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Kai", programs: "Hackathons", yearsAttended: "2023-2024", gradYear: "", nowDoing: "building my own project", field: "Web development", school: "", story: "Building an app that helps neighbors share useful resources and learning more each time it changes.", link: "", proudOf: "Turning an idea into a working demo", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-18) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Maya", programs: "AI Academy: Spark, Hackathons", yearsAttended: "2024-2025", gradYear: "2027", nowDoing: "high school", field: "", school: "", story: "Still in high school and working with a team on projects for student hackathons.", link: "", proudOf: "Presenting a project with my team", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-14) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Riley", programs: "AI Academy: Reboot", yearsAttended: "2022-2023", gradYear: "2022", nowDoing: "trade or bootcamp", field: "IT support", school: "", story: "Exploring a technical training path and using digital skills in hands-on practice.", link: "", proudOf: "Sticking with a new learning goal", imageNotes: "", status: "hidden", consentShare: false, consentContact: false, submittedAt: new Date(d(-10) + "T12:00:00.000Z").toISOString() },
-        { firstName: "", programs: "AI Academy: Amplify", yearsAttended: "2021-2022", gradYear: "2021", nowDoing: "working in tech", field: "Information technology", school: "", story: "Working in technology and using problem-solving skills to support community projects.", link: "", proudOf: "Helping a team solve a tricky problem", imageNotes: "", status: "new", consentShare: true, consentContact: false, submittedAt: new Date(d(-5) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Devin", programs: "Summer Camps, Hackathons", yearsAttended: "2022-2023", gradYear: "2024", nowDoing: "working (other field)", field: "", school: "", story: "Working in a new field and keeping a personal coding project moving in free time.", link: "", proudOf: "Making time to keep learning", imageNotes: "", status: "featured", consentShare: true, consentContact: true, contact: "", submittedAt: new Date(d(-2) + "T12:00:00.000Z").toISOString() }
+        { firstName: "Alex", programs: "AI Academy: Spark", yearsAttended: "2022-2023", gradYear: "2025", nowDoing: "college / university", field: "Computer Science", school: "Arizona State University", story: "Studying computer science at Arizona State University and gaining confidence by building projects.", link: "", proudOf: "Starting a computer science degree", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-30) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Sam", programs: "Hackathons, AI Academy: Spark", yearsAttended: "2023-2024", gradYear: "2024", nowDoing: "community college", field: "Information Technology", school: "Maricopa Community Colleges", story: "Taking information technology classes at a Maricopa community college and practicing with small projects.", link: "", proudOf: "Keeping up with college coursework", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-25) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Jordan", programs: "Summer Camps", yearsAttended: "2021-2022", gradYear: "2023", nowDoing: "internship", field: "Software development", school: "Phoenix technology company", story: "Completed an internship with a Phoenix technology company and learned how a software team works together.", link: "", proudOf: "Contributing to a team project", imageNotes: "", status: "reviewed", consentShare: false, consentContact: false, submittedAt: new Date(d(-22) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Kai", programs: "Hackathons", yearsAttended: "2023-2024", gradYear: "", nowDoing: "building my own project", field: "Web development", school: "", story: "Building an app that helps neighbors share useful resources and learning more each time it changes.", link: "", proudOf: "Turning an idea into a working demo", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-18) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Maya", programs: "AI Academy: Spark, Hackathons", yearsAttended: "2024-2025", gradYear: "2027", nowDoing: "high school", field: "", school: "", story: "Still in high school and working with a team on projects for student hackathons.", link: "", proudOf: "Presenting a project with my team", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-14) + "T12:00:00.000Z").toISOString(), ageConfirm: "minor-with-permission", parentEmail: "parent.maya@example.test" },
+        { firstName: "Riley", programs: "AI Academy: Reboot", yearsAttended: "2022-2023", gradYear: "2022", nowDoing: "trade or bootcamp", field: "IT support", school: "", story: "Exploring a technical training path and using digital skills in hands-on practice.", link: "", proudOf: "Sticking with a new learning goal", imageNotes: "", status: "hidden", consentShare: false, consentContact: false, submittedAt: new Date(d(-10) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "", programs: "AI Academy: Amplify", yearsAttended: "2021-2022", gradYear: "2021", nowDoing: "working in tech", field: "Information technology", school: "", story: "Working in technology and using problem-solving skills to support community projects.", link: "", proudOf: "Helping a team solve a tricky problem", imageNotes: "", status: "new", consentShare: true, consentContact: false, submittedAt: new Date(d(-5) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Devin", programs: "Summer Camps, Hackathons", yearsAttended: "2022-2023", gradYear: "2024", nowDoing: "working (other field)", field: "", school: "", story: "Working in a new field and keeping a personal coding project moving in free time.", link: "", proudOf: "Making time to keep learning", imageNotes: "", status: "featured", consentShare: true, consentContact: true, contact: "", submittedAt: new Date(d(-2) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" }
       ]
     },
     // Saved newsletter drafts; reached from the Newsletter extra view.

@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Coding in Color</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@1,600;1,700&display=swap" rel="stylesheet">
 <!--
   ╔══════════════════════════════════════════════════════════════════════════╗
   ║  CONFIG-DRIVEN STARTER — generic engine plus a replaceable app preset     ║
@@ -19,132 +22,29 @@
   ╚══════════════════════════════════════════════════════════════════════════╝
 -->
 <style>
-/* ===================== THEMES (change colors here or add a new block) ===================== */
-:root{
-  --radius:12px; --font:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06);
-}
-[data-theme="ocean"]{--bg:#f3f6fb;--surface:#ffffff;--text:#16212f;--muted:#6a7787;--border:#e2e8f0;--primary:#2563eb;--primary-text:#fff;--side:#0f1d33;--side-text:#c9d6ea;--danger:#dc2626;--ok:#16a34a;--warn:#d97706;
-  --c1:#2563eb;--c2:#0ea5e9;--c3:#14b8a6;--c4:#8b5cf6;--c5:#f59e0b;--c6:#ef4444}
-[data-theme="forest"]{--bg:#f4f7f2;--surface:#ffffff;--text:#1b2a1f;--muted:#69776b;--border:#dfe7dc;--primary:#2f7d4f;--primary-text:#fff;--side:#173324;--side-text:#cfe3d5;--danger:#c0392b;--ok:#2f7d4f;--warn:#b7791f;
-  --c1:#2f7d4f;--c2:#7cb342;--c3:#26a69a;--c4:#8d6e63;--c5:#f9a825;--c6:#d84315}
-[data-theme="sunset"]{--bg:#fff7f2;--surface:#ffffff;--text:#2b1a14;--muted:#8a6f63;--border:#f1ddd2;--primary:#e8590c;--primary-text:#fff;--side:#3b1d12;--side-text:#f3d9cb;--danger:#c92a2a;--ok:#2b8a3e;--warn:#e67700;
-  --c1:#e8590c;--c2:#f59f00;--c3:#d6336c;--c4:#7048e8;--c5:#1098ad;--c6:#5c940d}
-[data-theme="midnight"]{--bg:#0e131b;--surface:#161d29;--text:#e6ecf5;--muted:#8d9bb0;--border:#263143;--primary:#6ea8ff;--primary-text:#0b1220;--side:#0a0f16;--side-text:#9fb0c8;--danger:#ff6b6b;--ok:#4ade80;--warn:#fbbf24;
-  --c1:#6ea8ff;--c2:#4dd4ac;--c3:#c792ea;--c4:#ffcb6b;--c5:#ff8b7b;--c6:#82aaff}
-[data-theme="mono"]{--bg:#f6f6f6;--surface:#ffffff;--text:#111;--muted:#777;--border:#e3e3e3;--primary:#111;--primary-text:#fff;--side:#111;--side-text:#ccc;--danger:#b00020;--ok:#1b7f3b;--warn:#a15c00;
-  --c1:#111;--c2:#555;--c3:#888;--c4:#aaa;--c5:#c9a227;--c6:#b00020}
-
-/* ===================== LAYOUT ===================== */
-*{box-sizing:border-box}
-html,body{margin:0;height:100%}
-body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:1.45}
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100%}
-.side{background:var(--side);color:var(--side-text);padding:18px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:18px;padding:4px 8px 2px}
-.brand .logo{font-size:24px}
-.tagline{font-size:12px;color:var(--side-text);opacity:.8;padding:0 8px 14px}
-.nav a{display:flex;align-items:center;gap:10px;color:var(--side-text);text-decoration:none;padding:9px 10px;border-radius:10px;cursor:pointer}
-.nav a:hover{background:rgba(255,255,255,.08)}
-.nav a.active{background:var(--primary);color:var(--primary-text)}
-.nav .sep{height:1px;background:rgba(255,255,255,.12);margin:8px 4px}
-.main{padding:26px 30px 60px;max-width:1200px;width:100%}
-h1{margin:0 0 4px;font-size:26px}
-.sub{color:var(--muted);margin:0 0 20px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-.grid{display:grid;gap:14px}
-.stats{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px}
-.stat .label{color:var(--muted);font-size:13px}
-.stat .value{font-size:28px;font-weight:700;margin-top:2px}
-.stat .hint{font-size:12px;color:var(--muted)}
-.charts{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
-.card h3{margin:0 0 10px;font-size:15px}
-canvas{width:100%;height:220px;display:block}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-
-/* ===================== TOOLBAR / TABLE ===================== */
-.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.toolbar .spacer{flex:1}
-input,select,textarea,button{font:inherit;color:inherit}
-input[type=text],input[type=number],input[type=date],input[type=email],input[type=tel],input[type=search],select,textarea{
-  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;min-width:0}
-input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--primary) 45%,transparent);border-color:var(--primary)}
-.btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 13px;cursor:pointer;font-weight:600}
-.btn:hover{border-color:var(--primary)}
-.btn.primary{background:var(--primary);color:var(--primary-text);border-color:var(--primary)}
-.btn.danger{color:var(--danger)}
-.btn.small{padding:4px 9px;font-size:13px;font-weight:600}
-.tablewrap{overflow:auto;padding:0}
-table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
-td.wrap{white-space:normal;min-width:160px}
-th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;background:var(--surface);position:sticky;top:0}
-th.noclick{cursor:default}
-tr:last-child td{border-bottom:none}
-tbody tr:hover{background:color-mix(in srgb,var(--primary) 5%,transparent)}
-tr.flag-warn td:first-child{box-shadow:inset 4px 0 0 var(--warn)}
-tr.flag-bad td:first-child{box-shadow:inset 4px 0 0 var(--danger)}
-tr.flag-good td:first-child{box-shadow:inset 4px 0 0 var(--ok)}
-.attention{margin-bottom:14px}
-.att-count{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--danger);color:#fff;font-size:12px}
-.att-list{list-style:none;padding:0;margin:0}
-.att-list li{padding:7px 10px;border-left:4px solid var(--border)}
-.att-list li.att-bad{border-color:var(--danger)}
-.att-list li.att-warn{border-color:var(--warn)}
-.att-list a{color:inherit;text-decoration:none}
-.att-list a:hover{text-decoration:underline}
-.att-ent,.att-why,.att-more{font-size:12px;color:var(--muted)}
-.att-ent{margin-left:6px}
-.att-why{margin-left:8px}
-.att-more{margin-top:8px}
-td.num,th.num{text-align:right}
-.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}
-.empty{padding:40px;text-align:center;color:var(--muted)}
-.count{color:var(--muted);font-size:13px}
-
-/* ===================== MODAL / TOAST ===================== */
-.overlay{position:fixed;inset:0;background:rgba(10,15,25,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
-.modal{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-.modal h2{margin:0 0 14px;font-size:20px}
-.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
-.field label{font-size:13px;font-weight:600;color:var(--muted)}
-.field .err{color:var(--danger);font-size:12px;min-height:0}
-.field input[type=checkbox]{width:20px;height:20px}
-.modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:100;align-items:center}
-.toast{background:#111;color:#fff;padding:10px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:14px}
-.toast.bad{background:var(--danger)}
-.pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
-.pass-overlay{position:fixed;inset:0;z-index:200;background:rgba(10,15,25,.62);display:grid;place-items:center;padding:16px}
-.pass-card{width:min(100%,420px);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-.pass-card label{display:block;font-weight:650;margin-bottom:6px}
-.pass-card input{width:100%;min-height:48px}
-.pass-card .btn{min-height:46px;margin-top:12px}
-
-@media (max-width:820px){
-  .app{grid-template-columns:1fr}
-  .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px}
-  .tagline{display:none}
-  .nav{display:flex;flex-wrap:wrap;gap:4px}
-  .main{padding:18px 14px 50px}
-}
-@media print{
-  .side,.toolbar,.noprint,#toast{display:none!important}
-  .app{display:block} body{background:#fff}
-  .card{box-shadow:none;border:none} .main{padding:0}
-}
+:root{--bg:#0a0a0a;--surface:rgba(255,255,255,.03);--text:#f5f2ee;--muted:#b5b0aa;--border:rgba(255,255,255,.1);--primary:#a78b71;--primary-text:#0a0a0a;--side:#0a0a0a;--side-text:#f5f2ee;--danger:#d88a78;--ok:#a5bd9a;--warn:#c9b8a0;--c1:#a78b71;--c2:#c9b8a0;--c3:#e8d5b7;--c4:#77736e;--c5:#aaa39a;--c6:#504c47;--radius:24px;--font:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;--serif:"Playfair Display",Georgia,serif;--shadow:0 0 40px rgba(0,0,0,.35);--ease:cubic-bezier(.4,0,.2,1)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;scroll-behavior:smooth}body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;overflow-x:hidden}body:before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.08) .7px,transparent .7px);background-size:32px 32px;mask-image:linear-gradient(to bottom,black,transparent 88%)}
+.app,.site-footer,#toast{position:relative;z-index:1}.app{min-height:100vh}.topbar{position:fixed;z-index:40;top:0;left:0;right:0;min-height:76px;padding:12px clamp(20px,4vw,64px);display:grid;grid-template-columns:minmax(190px,1fr) auto minmax(190px,1fr);align-items:center;gap:22px;background:rgba(10,10,10,.78);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px)}.brand{display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none;font-family:var(--serif);font-style:italic;font-weight:700;font-size:20px;white-space:nowrap}.brand .logo{font-size:22px;color:var(--primary)}.tagline{display:none}.nav{display:flex;align-items:center;justify-content:center;gap:clamp(14px,2.1vw,34px);min-width:0}.nav a{display:inline-flex;align-items:center;color:#bcb8b2;text-decoration:none;padding:10px 0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;transition:color .25s var(--ease)}.nav a:hover,.nav a.active{color:#e8d5b7}.nav a:focus-visible,.student-link:focus-visible,.btn:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid #e8d5b7;outline-offset:4px}.nav .sep{display:none}.student-link{justify-self:end;background:#fff;color:#0a0a0a;border-radius:999px;padding:10px 18px;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap;transition:transform .25s var(--ease),box-shadow .25s var(--ease)}.student-link:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(255,255,255,.16)}.main{position:relative;z-index:1;padding:110px clamp(18px,5vw,76px) 42px;max-width:1600px;width:100%;margin:0 auto}h1,h2,h3{color:#f5f2ee}h1,h2{font-family:var(--serif);font-style:italic;font-weight:600}h1{font-size:clamp(2.2rem,5vw,4rem);margin:0 0 8px}h2{font-size:clamp(1.7rem,3vw,2.4rem);margin:0 0 10px}h3{font-family:var(--serif);font-style:italic;font-weight:600;font-size:18px;margin:0 0 10px}.sub{color:#aaa39a;margin:0 0 20px}.card{background:rgba(255,255,255,.03);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:24px;box-shadow:var(--shadow);padding:20px;transition:border-color .35s var(--ease),transform .35s var(--ease),background .35s var(--ease)}.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin:10px 0 28px}.stat{display:block;color:inherit;text-decoration:none;min-height:150px}.stat:hover,.feature-card:hover{transform:translateY(-4px) scale(1.015);border-color:rgba(201,184,160,.55);background:rgba(255,255,255,.055)}.feature-icon{display:grid;width:48px;height:48px;place-items:center;border-radius:14px;background:rgba(167,139,113,.12);color:#e8d5b7;font-size:21px;margin-bottom:18px}.stat .label{color:#b5b0aa;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.stat .value{font-size:26px;font-weight:700;margin-top:2px;color:#f7f3ee}.stat .hint{font-size:12px;color:#aaa39a}.charts{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));margin:18px 0 36px}.charts .card{min-height:300px}canvas{width:100%;height:220px;display:block}.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:#b5b0aa;margin-top:8px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}.toolbar .spacer{flex:1}input,select,textarea,button{font:inherit;color:inherit}input[type=text],input[type=number],input[type=date],input[type=email],input[type=tel],input[type=search],select,textarea{background:rgba(255,255,255,.04);color:#f5f2ee;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 12px;min-width:0}select option{background:#171614;color:#f5f2ee}input::placeholder,textarea::placeholder{color:#827d76}input:focus,select:focus,textarea:focus{outline:2px solid #a78b71;outline-offset:2px;border-color:#c9b8a0}.btn{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 15px;cursor:pointer;font-weight:600;transition:all .25s var(--ease)}.btn:hover{border-color:#c9b8a0;background:rgba(167,139,113,.1)}.btn.primary{background:#fff;color:#0a0a0a;border-color:#fff}.btn.primary:hover{background:#e8d5b7;border-color:#e8d5b7}.btn.danger{color:#e4a495;border-color:rgba(216,138,120,.4)}.btn.small{padding:5px 10px;font-size:12px}a{color:#e8d5b7;text-underline-offset:3px}.tablewrap{overflow:auto;padding:0;border-radius:14px;border:1px solid rgba(255,255,255,.08)}table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.015)}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}td.wrap{white-space:normal;min-width:160px}th{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#c9b8a0;cursor:pointer;user-select:none;background:rgba(255,255,255,.04);position:sticky;top:0}th.noclick{cursor:default}tr:last-child td{border-bottom:none}tbody tr:hover{background:rgba(167,139,113,.08)}tr.flag-warn td:first-child{box-shadow:inset 3px 0 0 #c9b8a0}tr.flag-bad td:first-child{box-shadow:inset 3px 0 0 #d88a78}tr.flag-good td:first-child{box-shadow:inset 3px 0 0 #a5bd9a}.attention{margin:22px 0}.att-count{display:inline-block;padding:2px 9px;border-radius:999px;background:rgba(201,184,160,.16);color:#e8d5b7;font-size:12px}.att-list{list-style:none;padding:0;margin:0}.att-list li{padding:8px 10px;border-left:2px solid rgba(255,255,255,.12)}.att-list li.att-bad{border-color:#d88a78}.att-list li.att-warn{border-color:#c9b8a0}.att-list a{color:inherit;text-decoration:none}.att-list a:hover{color:#e8d5b7;text-decoration:underline}.att-ent,.att-why,.att-more{font-size:12px;color:#aaa39a}.att-ent{margin-left:6px}.att-why{margin-left:8px}.att-more{margin-top:8px}td.num,th.num{text-align:right}.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#e8d5b7;background:rgba(167,139,113,.16);border:1px solid rgba(201,184,160,.22)}.empty{padding:40px;text-align:center;color:#aaa39a}.count{color:#aaa39a;font-size:13px}.pill{display:inline-block;font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);color:#c9b8a0}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.76);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}.modal{background:rgba(20,19,17,.96);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:28px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:24px;box-shadow:0 0 80px rgba(167,139,113,.12)}.modal h2{margin:0 0 14px;font-size:25px}.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}.field label{font-size:12px;font-weight:600;color:#c9b8a0}.field .err{color:#e4a495;font-size:12px}.field input[type=checkbox]{width:20px;height:20px}.modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:100;align-items:center}.toast{background:rgba(28,27,25,.96);color:#fff;padding:12px 18px;border:1px solid rgba(255,255,255,.14);border-radius:999px;box-shadow:0 8px 32px rgba(0,0,0,.4);font-size:13px}.toast.bad{background:#492c27}.pass-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:grid;place-items:center;padding:16px}.pass-card{width:min(100%,440px);background:rgba(255,255,255,.035);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);border-radius:32px;padding:30px;box-shadow:0 0 100px rgba(167,139,113,.2)}.pass-card label{display:block;font-weight:650;margin-bottom:8px;color:#e8d5b7}.pass-card input{width:100%;min-height:48px}.pass-card .btn{min-height:46px;margin-top:12px}.site-footer{max-width:1600px;margin:0 auto;padding:22px clamp(18px,5vw,76px) 30px;border-top:1px solid rgba(255,255,255,.08);color:#aaa39a;font-size:12px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.site-footer .footer-brand{font-family:var(--serif);font-size:17px;color:#f5f2ee}.site-footer q{color:#c9b8a0}
+.neural-hero{position:relative;margin:0 auto 28px;max-width:1330px;padding:16px 0 0}.neural-stage{position:relative;min-height:650px;isolation:isolate}.neural-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:-1}.node-line{fill:none;stroke:url(#nodeGold);stroke-width:2.5;opacity:.58;animation:pulsing-branch 3.4s ease-in-out infinite}.node-line.flow{stroke:#c9b8a0;stroke-width:1.5;stroke-dasharray:5 15;animation:line-flow 2.8s linear infinite}.neural-stage.is-paused .node-line{animation-play-state:paused}.neural-stage.is-paused .live-dot{animation-play-state:paused}.neural-core{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:min(58%,790px);aspect-ratio:16/9;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(18px,3vw,38px);border-radius:30px;background:linear-gradient(140deg,rgba(255,255,255,.07),rgba(255,255,255,.025));backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.17);box-shadow:0 0 100px rgba(167,139,113,.2);z-index:2}.core-label,.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#c9b8a0;font-weight:700}.core-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.core-metric{border-left:1px solid rgba(201,184,160,.36);padding-left:12px}.core-metric strong{display:block;font-size:clamp(21px,3vw,36px);line-height:1.1}.core-metric span{display:block;color:#b5b0aa;font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-top:6px}.demo-chip{align-self:flex-start}.live-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.035);backdrop-filter:blur(10px);font-size:11px;color:#f5f2ee;width:max-content;max-width:100%}.live-word{color:#b3c9a5;font-size:9px;font-weight:700;letter-spacing:.12em}.live-dot{width:8px;height:8px;border-radius:50%;background:#a5bd9a;box-shadow:0 0 14px rgba(165,189,154,.7);animation:breathe 1.7s ease-in-out infinite}.neural-satellite{position:absolute;z-index:3;width:clamp(210px,21vw,300px);min-height:130px;padding:16px 18px;text-decoration:none;color:#f5f2ee;background:rgba(255,255,255,.035);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:20px;box-shadow:0 14px 44px rgba(0,0,0,.3);transition:transform .7s var(--ease),border-color .7s var(--ease),box-shadow .7s var(--ease);animation:reveal .9s cubic-bezier(.16,1,.3,1) both}.neural-satellite:hover{transform:scale(1.05);border-color:rgba(201,184,160,.55);box-shadow:0 0 60px rgba(167,139,113,.3)}.sat-1{left:0;top:5%}.sat-2{right:0;top:5%;animation-delay:.08s}.sat-3{left:0;bottom:5%;animation-delay:.14s}.sat-4{right:0;bottom:5%;animation-delay:.2s}.sat-5{left:50%;bottom:0;transform:translateX(-50%);animation-delay:.26s}.sat-5:hover{transform:translateX(-50%) scale(1.05)}.sat-title{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#c9b8a0;font-weight:700}.sat-value{font-family:var(--serif);font-style:italic;font-size:20px;line-height:1.25;margin:9px 0 4px}.sat-note{color:#aaa39a;font-size:11px}.sat-minis{display:flex;align-items:center;gap:7px;margin-top:9px}.sat-minis span{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:rgba(201,184,160,.14);filter:grayscale(1);transition:filter .7s}.neural-satellite:hover .sat-minis span{filter:grayscale(0)}.live-notice{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:4}.hero-headline{text-align:center;max-width:980px;margin:18px auto 22px;font-family:var(--serif);font-style:italic;font-size:clamp(2.5rem,8vw,6rem);font-weight:600;line-height:1.02;letter-spacing:-.035em}.hero-headline .gold{color:#a78b71}.hero-ctas{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:0 auto 52px}.hero-ctas a{display:inline-flex;align-items:center;justify-content:center;padding:12px 20px;border-radius:999px;text-decoration:none;font-size:12px;font-weight:700}.cta-outline{border:1px solid rgba(201,184,160,.5);color:#e8d5b7}.cta-solid{background:#fff;color:#0a0a0a}.features-heading{margin:36px 0 16px}.stats .stat{padding-top:20px}.feature-icon{flex:0 0 48px}.attention{scroll-margin-top:96px}.cic-wall-host{background:rgba(255,255,255,.025)!important;box-shadow:0 0 65px rgba(167,139,113,.12)!important;border:1px solid rgba(255,255,255,.1);border-radius:28px!important;overflow:hidden}.cic-wall-figure{color:#f5f2ee!important}.cic-wall-figure img{border-radius:14px!important}.cic-wall-empty{color:#d5d0c8!important}.cic-wall-empty a{color:#e8d5b7!important}.cic-gallery-filters button{background:rgba(255,255,255,.05)!important;color:#eee!important;border:1px solid rgba(255,255,255,.12)!important}.cic-gallery-filters button[aria-pressed=true]{background:#a78b71!important;color:#0a0a0a!important}.cic-staff-gallery a{color:#e8d5b7!important}.page-title{font-family:var(--serif);font-style:italic}.stagger-in{animation:reveal .85s cubic-bezier(.16,1,.3,1) both}@keyframes pulsing-branch{0%,100%{opacity:.4}50%{opacity:.7}}@keyframes line-flow{to{stroke-dashoffset:-40}}@keyframes breathe{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}@keyframes reveal{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1000px){.topbar{grid-template-columns:auto minmax(0,1fr) auto;gap:14px}.nav{justify-content:flex-start;overflow-x:auto;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}.neural-stage{min-height:760px}.neural-core{width:min(72%,720px);top:46%}.neural-satellite{width:clamp(190px,29vw,260px)}.sat-1,.sat-3{left:1%}.sat-2,.sat-4{right:1%}.sat-1,.sat-2{top:4%}.sat-3,.sat-4{bottom:4%}.sat-5{bottom:0}}
+@media(max-width:680px){.topbar{min-height:68px;padding:10px 14px;grid-template-columns:1fr auto;gap:8px}.brand{font-size:17px}.student-link{padding:9px 12px;font-size:11px}.nav{grid-column:1/-1;grid-row:2;order:3;width:calc(100vw - 28px);gap:22px;padding:1px 0 4px}.topbar{padding-bottom:6px}.main{padding:122px 16px 28px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{min-height:142px;padding:14px}.stats .stat{padding-top:68px}.neural-hero{margin:0 -2px 28px}.neural-stage{min-height:880px;padding-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}.neural-core{position:relative;inset:auto;transform:none;grid-column:1/-1;grid-row:1;width:100%;aspect-ratio:16/9;min-height:210px;padding:18px;border-radius:24px}.core-metrics{grid-template-columns:repeat(2,1fr);gap:9px}.core-metric strong{font-size:23px}.core-metric span{font-size:9px}.live-notice{top:auto;bottom:0;font-size:10px}.neural-satellite{position:relative;inset:auto!important;transform:none!important;width:100%;min-height:130px;padding:13px;border-radius:16px}.neural-satellite:hover{transform:scale(1.02)!important}.sat-5{grid-column:1/-1;min-height:100px}.neural-lines{display:none}.hero-headline{font-size:clamp(2.5rem,13vw,4rem);margin:18px 0}.hero-ctas{margin-bottom:36px}.charts{grid-template-columns:1fr}.site-footer{display:block;padding:20px 18px}.site-footer>*{margin:5px 0}.card{padding:16px}.toolbar{align-items:stretch}.toolbar>*{max-width:100%}.tablewrap{max-width:calc(100vw - 34px)}.cic-staff-gallery .cic-wall-host{min-height:320px}}
+@media(max-width:420px){.nav{gap:16px}.nav a{font-size:9px;letter-spacing:.1em}.core-metric{padding-left:8px}.core-metric strong{font-size:19px}.neural-stage{min-height:900px}.sat-value{font-size:17px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media print{.topbar,.site-footer,.toolbar,.noprint,#toast{display:none!important}.app{display:block}body{background:#fff;color:#111}.card{background:#fff;border:0;box-shadow:none}.main{padding:0}}
 </style>
 </head>
 <body>
 <div class="app">
-  <aside class="side">
-    <div class="brand"><span class="logo" id="logo"></span><span id="appName"></span></div>
-    <div class="tagline" id="tagline"></div>
-    <nav class="nav" id="nav"></nav>
-  </aside>
+  <header class="topbar">
+    <a class="brand" href="#/dashboard" aria-label="Coding in Color dashboard"><span class="logo" id="logo"></span><span id="appName"></span></a>
+    <nav class="nav" id="nav" aria-label="Staff portal"></nav>
+    <a class="student-link" href="/" target="_blank" rel="noopener">Student page ↗</a>
+  </header>
   <main class="main" id="main"></main>
 </div>
+<footer class="site-footer"><span class="footer-brand">Coding in Color</span><q>Talent is everywhere, opportunity is not.</q><span><a href="/" target="_blank" rel="noopener">Student page</a> · <a href="https://github.com/CoolBro34/firebytes-hackathon" target="_blank" rel="noopener">GitHub repo</a></span></footer>
 <div id="toast"></div>
 
 <script>
@@ -459,6 +359,65 @@ function excerpt(text, limit = 110) {
   return value.length > limit ? value.slice(0, limit - 1).trimEnd() + "…" : value;
 }
 
+
+function codingColorDashboardHero(data) {
+  const updates = data.update || [], sessions = data.session || [], posts = data.post || [];
+  const newest = (a, b) => (Date.parse(b.submittedAt || b.date || "") || 0) - (Date.parse(a.submittedAt || a.date || "") || 0);
+  const consented = updates.filter(row => row.consentShare === true).slice().sort(newest);
+  const latestStory = consented[0], waiting = posts.filter(row => !row.used), recentPost = posts.slice().sort(newest)[0];
+  const newUpdates = updates.filter(row => row.status === "new");
+  const active = updates.filter(row => ["college / university", "community college", "internship", "working in tech", "working (other field)"].includes(row.nowDoing));
+  const alumniRate = updates.length ? Math.round(active.length / updates.length * 100) : 0;
+  const heads = sessions.reduce((sum, row) => sum + Number(row.headcount || 0), 0), returning = sessions.reduce((sum, row) => sum + Number(row.returning || 0), 0);
+  const returningRate = heads ? Math.round(returning / heads * 100) : 0;
+  const lowSession = sessions.slice().sort((a, b) => (Number(a.headcount) ? Number(a.returning) / Number(a.headcount) : 0) - (Number(b.headcount) ? Number(b.returning) / Number(b.headcount) : 0))[0];
+  const attention = [];
+  for (const [name, entity] of Object.entries(CONFIG.entities)) for (const row of data[name] || []) {
+    try { if (typeof entity.rowClass === "function" && ["flag-bad", "flag-warn"].includes(entity.rowClass(row))) attention.push({ title: row[entity.titleField] || entity.titleFallback || "Update" }); } catch (e) { }
+  }
+  const weekAgo = Date.now() - 7 * 86400000, updatesThisWeek = updates.filter(row => (Date.parse(row.submittedAt || "") || 0) >= weekAgo).length;
+  const stat = (value, label) => `<div class="core-metric"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
+  const satellite = (klass, href, label, title, note, target = "") => `<a class="neural-satellite ${klass}" href="${href}" ${target} aria-label="${esc(label + ": " + title)}"><div class="sat-title">${esc(label)}</div><div class="sat-value">${esc(title)}</div><div class="sat-note">${esc(note)}</div></a>`;
+  return `<section class="neural-hero" aria-label="Coding in Color staff overview"><div class="neural-stage" id="neuralStage">
+    <svg class="neural-lines" id="neuralLines" aria-hidden="true" focusable="false"><defs><linearGradient id="nodeGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c9b8a0" stop-opacity=".9"/><stop offset="100%" stop-color="#a78b71" stop-opacity=".1"/></linearGradient></defs>${["alumni", "newsletter", "sessions", "attention", "student"].map(id => `<path class="node-line" data-node="${id}"/><path class="node-line flow" data-node="${id}"/>`).join("")}</svg>
+    <div class="live-notice"><span class="live-pill"><i class="live-dot" aria-hidden="true"></i><b class="live-word">LIVE</b><span>${newUpdates.length} new alumni update${newUpdates.length === 1 ? "" : "s"} to review</span></span></div>
+    ${satellite("sat-1", "#/update", "Alumni updates", latestStory ? `${latestStory.firstName ? String(latestStory.firstName).split(/\s+/)[0] : "Alum"} · ${latestStory.status || "shared"}` : "Your alumni stories", latestStory ? excerpt(latestStory.story, 72) : "Review voluntary stories from the community.")}
+    ${satellite("sat-2", "#/x/newsletter", "Newsletter", `${waiting.length} posts waiting`, recentPost ? `Latest: ${excerpt(recentPost.title, 64)}` : "Build a family update from your posts.")}
+    ${satellite("sat-3", "#/session", "Sessions", `${returningRate}% returning`, lowSession ? `Focus: ${excerpt(lowSession.program, 32)} · ${pct(lowSession.returning, lowSession.headcount) || 0}%` : "Log anonymous headcounts and return rates.")}
+    ${satellite("sat-4", "#attention", "Needs attention", `${attention.length} item${attention.length === 1 ? "" : "s"}`, attention[0] ? `Next: ${excerpt(attention[0].title, 54)}` : "No items need follow-up right now.")}
+    ${satellite("sat-5", "/", "Student share page", "Share your story", `${updatesThisWeek} update${updatesThisWeek === 1 ? "" : "s"} this week`, 'target="_blank" rel="noopener"')}
+    <div class="neural-core" id="neuralCore" aria-label="Live overview summary"><span class="badge demo-chip" title="${esc(CONFIG.demoNotice || "Staff overview")}">Demo data</span><div class="core-label">CODING IN COLOR · LIVE OVERVIEW</div><div class="core-metrics">${stat(updates.length, "alumni updates")}${stat(alumniRate + "%", "college or working")}${stat(returningRate + "%", "returning students")}${stat(waiting.length, "posts waiting")}</div></div>
+  </div><h1 class="hero-headline">Every student's <span class="gold">story</span>,<br>all in <span class="gold">one place</span>.</h1><div class="hero-ctas"><a class="cta-outline" href="#/update">Review alumni updates</a><a class="cta-solid" href="#/x/newsletter">Build the newsletter</a></div></section>`;
+}
+
+function wireDashboardNeuralLines() {
+  const stage = document.querySelector("#neuralStage"), core = document.querySelector("#neuralCore"), svg = document.querySelector("#neuralLines");
+  if (!stage || !core || !svg) return;
+  const update = () => {
+    const bounds = stage.getBoundingClientRect(), center = core.getBoundingClientRect();
+    svg.setAttribute("viewBox", `0 0 ${Math.round(bounds.width)} ${Math.round(bounds.height)}`);
+    const cx = center.left + center.width / 2 - bounds.left, cy = center.top + center.height / 2 - bounds.top;
+    stage.querySelectorAll(".neural-satellite").forEach(card => {
+      const label = card.getAttribute("aria-label") || "", target = label.startsWith("Alumni") ? "alumni" : label.startsWith("Newsletter") ? "newsletter" : label.startsWith("Sessions") ? "sessions" : label.startsWith("Needs") ? "attention" : "student";
+      const box = card.getBoundingClientRect(), x = box.left + box.width / 2 - bounds.left, y = box.top + box.height / 2 - bounds.top;
+      const dx = x - cx, dy = y - cy, bend = Math.max(36, Math.min(110, Math.abs(dx) * .24));
+      const d = `M ${cx} ${cy} C ${cx + (dx < 0 ? -bend : bend)} ${cy + dy * .12}, ${x - (dx < 0 ? -bend : bend)} ${y - dy * .12}, ${x} ${y}`;
+      stage.querySelectorAll(`.node-line[data-node="${target}"]`).forEach(path => path.setAttribute("d", d));
+    });
+  };
+  let frame = 0;
+  const schedule = () => { if (frame) cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { frame = 0; update(); }); };
+  const spaceToActivate = event => { if (event.key === " ") { event.preventDefault(); event.currentTarget.click(); } };
+  const satellites = [...stage.querySelectorAll(".neural-satellite")];
+  satellites.forEach(card => card.addEventListener("keydown", spaceToActivate));
+  const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+  if (observer) observer.observe(stage);
+  window.addEventListener("resize", schedule);
+  const onVisibility = () => stage.classList.toggle("is-paused", document.hidden);
+  document.addEventListener("visibilitychange", onVisibility); onVisibility(); update();
+  return () => { if (frame) cancelAnimationFrame(frame); observer && observer.disconnect(); satellites.forEach(card => card.removeEventListener("keydown", spaceToActivate)); window.removeEventListener("resize", schedule); document.removeEventListener("visibilitychange", onVisibility); };
+}
+
 // The generic dashboard is engine-owned, so add this preset card only after its charts exist.
 function watchDashboardForAlumniWall() {
   const dashboard = document.querySelector("#main");
@@ -474,13 +433,14 @@ function watchDashboardForAlumniWall() {
     const subline = document.createElement("p"); subline.className = "sub"; subline.textContent = "Consented stories from former students. Drag or scroll to explore.";
     const host = document.createElement("div"); host.id = "alumniWall"; host.className = "cic-wall-host";
     host.tabIndex = 0; host.setAttribute("role", "region"); host.setAttribute("aria-label", "Alumni wall, use left and right arrow keys");
-    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#111;padding:24px"; host.appendChild(loading);
+    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#ddd;padding:24px"; host.appendChild(loading);
     const review = document.createElement("p"); review.style.margin = "12px 0 0";
     const link = document.createElement("a"); link.href = "#/update"; link.textContent = "Review all alumni updates →"; review.appendChild(link);
     section.append(styles, heading, subline, host, review);
-    dashboard.insertBefore(section, stats);
-    const wall = GALLERY.create(host, { bend: 3.5, textColor: "#111", borderRadius: 0.08, font: "500 26px Poppins, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03 });
-    window._cleanup = wall.destroy;
+    dashboard.insertBefore(section, dashboard.querySelector("#charts"));
+    const wall = GALLERY.create(host, { bend: 3.5, textColor: "#f5f2ee", borderRadius: 0.08, font: "500 26px Inter, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03 });
+    const priorCleanup = window._cleanup;
+    window._cleanup = () => { if (priorCleanup) priorCleanup(); wall.destroy(); };
     Store.list("update").then(updates => wall.mount(updates)).catch(() => wall.mount([]));
   };
   const observer = new MutationObserver(addWall);
@@ -493,7 +453,7 @@ function renderStaffAlumniGallery(name, main, api) {
   if (name !== "update") return;
   ensureWallCSS();
   const styles = document.createElement("style");
-  styles.textContent = ".cic-staff-gallery{margin:0 0 18px}.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}.cic-gallery-filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.cic-gallery-filters button{border:0;background:#F3F3F3;color:#111;border-radius:0;padding:8px 14px;cursor:pointer}.cic-gallery-filters button[aria-pressed=true]{background:#0A8F27;color:#fff}.cic-open-story{margin-top:10px}@media(max-width:640px){.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}}";
+  styles.textContent = ".cic-staff-gallery{margin:0 0 18px}.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}.cic-gallery-filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.cic-gallery-filters button{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#eee;border-radius:12px;padding:8px 14px;cursor:pointer}.cic-gallery-filters button[aria-pressed=true]{background:#a78b71;color:#0a0a0a}.cic-open-story{margin-top:10px}@media(max-width:640px){.cic-staff-gallery .cic-wall-host{height:60vh;min-height:360px}}";
   const section = document.createElement("section"); section.className = "cic-staff-gallery";
   const pageHeading = main.querySelector("h1"); if (pageHeading) pageHeading.textContent = "Alumni updates";
   const filters = document.createElement("div"); filters.className = "cic-gallery-filters"; filters.setAttribute("role", "group"); filters.setAttribute("aria-label", "Filter alumni updates");
@@ -507,7 +467,7 @@ function renderStaffAlumniGallery(name, main, api) {
     const items = staffGalleryItems(updates, filter);
     wall = GALLERY.create(host, {
       items: rows => staffGalleryItems(rows, filter), emptyMessage: "No alumni updates match this filter.", srLabel: "Alumni updates including private stories",
-      bend: 3.5, textColor: "#111", borderRadius: 0.08, font: "500 26px Poppins, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03,
+      bend: 3.5, textColor: "#f5f2ee", borderRadius: 0.08, font: "500 26px Inter, sans-serif", scrollSpeed: 2.5, scrollEase: 0.03,
       onOpen: item => item && api.openForm("update", item.record, async () => { updates = await api.list("update"); show(); })
     });
     wall.mount(updates);
@@ -523,7 +483,7 @@ function renderStaffAlumniGallery(name, main, api) {
 }
 
 /* Shared gallery CSS, injected once into <head> so every page that mounts a gallery gets the base layout. */
-const WALL_BASE_CSS = ".cic-wall-host{position:relative;height:380px;background:#F3F3F3;box-shadow:0 40px 100px rgba(0,0,0,.05);overflow:hidden;border-radius:40px}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:14px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(25vw,210px);margin:0;scroll-snap-align:center;color:#111;text-align:center;font:500 26px Poppins,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:8px;box-shadow:0 16px 32px rgba(0,0,0,.12)}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#111;text-align:center;padding:80px 18px;margin:0;font:400 15px Poppins,Arial,sans-serif}.cic-wall-empty a{color:#0A8F27;font-weight:500;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:280px;border-radius:28px}.cic-wall-figure{flex-basis:42vw;font-size:16px}}";
+const WALL_BASE_CSS = ".cic-wall-host{position:relative;height:380px;background:#151412;box-shadow:0 40px 100px rgba(0,0,0,.35);overflow:hidden;border-radius:40px}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:14px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(25vw,210px);margin:0;scroll-snap-align:center;color:#f5f2ee;text-align:center;font:500 26px Inter,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:8px;box-shadow:0 16px 32px rgba(0,0,0,.12)}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#f5f2ee;text-align:center;padding:80px 18px;margin:0;font:400 15px Inter,Arial,sans-serif}.cic-wall-empty a{color:#e8d5b7;font-weight:600;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:280px;border-radius:28px}.cic-wall-figure{flex-basis:42vw;font-size:16px}}";
 function ensureWallCSS() {
   if (document.getElementById("cic-wall-css")) return;
   const tag = document.createElement("style"); tag.id = "cic-wall-css"; tag.textContent = WALL_BASE_CSS; document.head.appendChild(tag);
@@ -699,9 +659,11 @@ const CONFIG = {
   // Shown as a "Demo data" badge on the dashboard so judges know the numbers are fictional sample data. Set to "" for real use.
   demoNotice: "All students, sessions and posts here are fictional sample data.",
   appName: "Coding in Color", tagline: "Talent is everywhere, opportunity is not.", logo: "‹IN›",
-  theme: "ocean", customTheme: { "--primary": "#0A8F27", "--side": "#000000", "--side-text": "#e5e5e5" },
+  theme: "ocean", customTheme: { "--primary": "#a78b71", "--side": "#0a0a0a", "--side-text": "#f5f2ee" },
   currency: "$", storage: "auto", apiBase: "", navEntities: ["update", "session"], navOrder: ["dashboard", "update", "x/newsletter", "session"],
   entityViewHook: renderStaffAlumniGallery,
+  dashboardHero: codingColorDashboardHero,
+  dashboardAfterRender: wireDashboardNeuralLines,
 
   entities: {
     // Instagram source material. Unsent older events/sign-ups are flagged for staff attention.
@@ -785,6 +747,9 @@ const CONFIG = {
         { key: "canFeature", label: "Can feature", type: "computed", compute: r => r.consentShare ? "yes" : "no" },
         { key: "consentContact", label: "Contact consent", type: "checkbox" },
         { key: "contact", label: "Contact (consent only)", type: "text", hideInTable: true },
+        // Age gate from the student form: "adult" (18+) or "minor-with-permission" (under 18, parent/guardian OK).
+        { key: "ageConfirm", label: "Age", type: "select", options: ["adult", "minor-with-permission"], badge: true, default: "adult" },
+        { key: "parentEmail", label: "Parent/guardian email (under 18)", type: "email", hideInTable: true },
         { key: "submittedAt", label: "Submitted", type: "text" }
       ],
       // Risk rule: all newly submitted alumni updates are queued for staff review.
@@ -799,14 +764,14 @@ const CONFIG = {
       ],
       charts: [{ title: "Where alumni are now", type: "doughnut", groupBy: "nowDoing" }, { title: "Updates by program", type: "bar", groupBy: "programs", splitComma: true }],
       seed: [
-        { firstName: "Alex", programs: "AI Academy: Spark", yearsAttended: "2022-2023", gradYear: "2025", nowDoing: "college / university", field: "Computer Science", school: "Arizona State University", story: "Studying computer science at Arizona State University and gaining confidence by building projects.", link: "", proudOf: "Starting a computer science degree", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-30) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Sam", programs: "Hackathons, AI Academy: Spark", yearsAttended: "2023-2024", gradYear: "2024", nowDoing: "community college", field: "Information Technology", school: "Maricopa Community Colleges", story: "Taking information technology classes at a Maricopa community college and practicing with small projects.", link: "", proudOf: "Keeping up with college coursework", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-25) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Jordan", programs: "Summer Camps", yearsAttended: "2021-2022", gradYear: "2023", nowDoing: "internship", field: "Software development", school: "Phoenix technology company", story: "Completed an internship with a Phoenix technology company and learned how a software team works together.", link: "", proudOf: "Contributing to a team project", imageNotes: "", status: "reviewed", consentShare: false, consentContact: false, submittedAt: new Date(d(-22) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Kai", programs: "Hackathons", yearsAttended: "2023-2024", gradYear: "", nowDoing: "building my own project", field: "Web development", school: "", story: "Building an app that helps neighbors share useful resources and learning more each time it changes.", link: "", proudOf: "Turning an idea into a working demo", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-18) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Maya", programs: "AI Academy: Spark, Hackathons", yearsAttended: "2024-2025", gradYear: "2027", nowDoing: "high school", field: "", school: "", story: "Still in high school and working with a team on projects for student hackathons.", link: "", proudOf: "Presenting a project with my team", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-14) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Riley", programs: "AI Academy: Reboot", yearsAttended: "2022-2023", gradYear: "2022", nowDoing: "trade or bootcamp", field: "IT support", school: "", story: "Exploring a technical training path and using digital skills in hands-on practice.", link: "", proudOf: "Sticking with a new learning goal", imageNotes: "", status: "hidden", consentShare: false, consentContact: false, submittedAt: new Date(d(-10) + "T12:00:00.000Z").toISOString() },
-        { firstName: "", programs: "AI Academy: Amplify", yearsAttended: "2021-2022", gradYear: "2021", nowDoing: "working in tech", field: "Information technology", school: "", story: "Working in technology and using problem-solving skills to support community projects.", link: "", proudOf: "Helping a team solve a tricky problem", imageNotes: "", status: "new", consentShare: true, consentContact: false, submittedAt: new Date(d(-5) + "T12:00:00.000Z").toISOString() },
-        { firstName: "Devin", programs: "Summer Camps, Hackathons", yearsAttended: "2022-2023", gradYear: "2024", nowDoing: "working (other field)", field: "", school: "", story: "Working in a new field and keeping a personal coding project moving in free time.", link: "", proudOf: "Making time to keep learning", imageNotes: "", status: "featured", consentShare: true, consentContact: true, contact: "", submittedAt: new Date(d(-2) + "T12:00:00.000Z").toISOString() }
+        { firstName: "Alex", programs: "AI Academy: Spark", yearsAttended: "2022-2023", gradYear: "2025", nowDoing: "college / university", field: "Computer Science", school: "Arizona State University", story: "Studying computer science at Arizona State University and gaining confidence by building projects.", link: "", proudOf: "Starting a computer science degree", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-30) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Sam", programs: "Hackathons, AI Academy: Spark", yearsAttended: "2023-2024", gradYear: "2024", nowDoing: "community college", field: "Information Technology", school: "Maricopa Community Colleges", story: "Taking information technology classes at a Maricopa community college and practicing with small projects.", link: "", proudOf: "Keeping up with college coursework", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-25) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Jordan", programs: "Summer Camps", yearsAttended: "2021-2022", gradYear: "2023", nowDoing: "internship", field: "Software development", school: "Phoenix technology company", story: "Completed an internship with a Phoenix technology company and learned how a software team works together.", link: "", proudOf: "Contributing to a team project", imageNotes: "", status: "reviewed", consentShare: false, consentContact: false, submittedAt: new Date(d(-22) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Kai", programs: "Hackathons", yearsAttended: "2023-2024", gradYear: "", nowDoing: "building my own project", field: "Web development", school: "", story: "Building an app that helps neighbors share useful resources and learning more each time it changes.", link: "", proudOf: "Turning an idea into a working demo", imageNotes: "", status: "featured", consentShare: true, consentContact: false, submittedAt: new Date(d(-18) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Maya", programs: "AI Academy: Spark, Hackathons", yearsAttended: "2024-2025", gradYear: "2027", nowDoing: "high school", field: "", school: "", story: "Still in high school and working with a team on projects for student hackathons.", link: "", proudOf: "Presenting a project with my team", imageNotes: "", status: "new", consentShare: false, consentContact: false, submittedAt: new Date(d(-14) + "T12:00:00.000Z").toISOString(), ageConfirm: "minor-with-permission", parentEmail: "parent.maya@example.test" },
+        { firstName: "Riley", programs: "AI Academy: Reboot", yearsAttended: "2022-2023", gradYear: "2022", nowDoing: "trade or bootcamp", field: "IT support", school: "", story: "Exploring a technical training path and using digital skills in hands-on practice.", link: "", proudOf: "Sticking with a new learning goal", imageNotes: "", status: "hidden", consentShare: false, consentContact: false, submittedAt: new Date(d(-10) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "", programs: "AI Academy: Amplify", yearsAttended: "2021-2022", gradYear: "2021", nowDoing: "working in tech", field: "Information technology", school: "", story: "Working in technology and using problem-solving skills to support community projects.", link: "", proudOf: "Helping a team solve a tricky problem", imageNotes: "", status: "new", consentShare: true, consentContact: false, submittedAt: new Date(d(-5) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" },
+        { firstName: "Devin", programs: "Summer Camps, Hackathons", yearsAttended: "2022-2023", gradYear: "2024", nowDoing: "working (other field)", field: "", school: "", story: "Working in a new field and keeping a personal coding project moving in free time.", link: "", proudOf: "Making time to keep learning", imageNotes: "", status: "featured", consentShare: true, consentContact: true, contact: "", submittedAt: new Date(d(-2) + "T12:00:00.000Z").toISOString(), ageConfirm: "adult", parentEmail: "" }
       ]
     },
     // Saved newsletter drafts; reached from the Newsletter extra view.
@@ -1174,15 +1139,18 @@ const state = {};  // per-entity table state
 const main = $("#main");
 
 async function viewDashboard() {
-  main.innerHTML = `<h1>Dashboard${CONFIG.demoNotice ? ` <span class="badge" style="background:var(--muted);vertical-align:middle" title="${esc(CONFIG.demoNotice)}">Demo data</span>` : ""}</h1><p class="sub">${esc(CONFIG.tagline)}${CONFIG.demoNotice ? " · " + esc(CONFIG.demoNotice) : ""}</p><div id="attention"></div><div class="grid stats" id="stats"></div><div class="grid charts" id="charts"></div>`;
   const data = {}; for (const n of Object.keys(CONFIG.entities)) data[n] = await Store.list(n);
+  const hero = typeof CONFIG.dashboardHero === "function" ? CONFIG.dashboardHero(data) : `<header class="dashboard-intro"><p class="eyebrow">STAFF OVERVIEW</p><h1>Dashboard</h1><p class="sub">${esc(CONFIG.tagline)}</p></header>`;
+  main.innerHTML = `${hero}<section class="feature-area"><p class="eyebrow">AT A GLANCE</p><h2 class="features-heading">The work, in motion</h2><div class="grid stats" id="stats"></div></section><div id="attention"></div><div class="grid charts" id="charts"></div>`;
   $("#attention").innerHTML = attentionHTML(data);
   let stats = "", chartDefs = [];
   for (const [n, ent] of Object.entries(CONFIG.entities)) {
     (ent.summary || []).forEach(s => {
       const v = computeStat(s, data[n]);
       const shown = s.format === "money" ? fmt.money(v) : s.format === "percent" ? fmt.number(Math.round(v * 100) / 100) + "%" : fmt.number(Math.round(v * 100) / 100);
-      stats += `<div class="card stat"><div class="label">${esc(s.label)}</div><div class="value">${esc(shown)}</div><div class="hint">${esc(s.hint || ent.label)}</div></div>`;
+      const target = n === "post" ? "x/newsletter" : n;
+      const icon = n === "update" ? "✦" : n === "session" ? "◉" : "⌁";
+      stats += `<a class="card stat feature-card" href="#/${esc(target)}" aria-label="${esc(s.label)}: ${esc(shown)}. Open ${esc(ent.label)}"><span class="feature-icon" aria-hidden="true">${icon}</span><div class="label">${esc(s.label)}</div><div class="value">${esc(shown)}</div><div class="hint">${esc(s.hint || ent.label)}</div></a>`;
     });
     (ent.charts || []).forEach(c => chartDefs.push({ ent, c, rows: data[n] }));
   }
@@ -1193,6 +1161,7 @@ async function viewDashboard() {
     if (x.c.type === "doughnut") $("#lg" + i).innerHTML = entries.map((e, k) => `<span><i style="background:${palette()[k % 6]}"></i>${esc(e[0])} (${esc(e[1])})</span>`).join("");
   });
   window._redraw = () => chartDefs.forEach((x, i) => { const cv = $("#cv" + i); cv && drawChart(cv, groupData(x.ent, x.rows, x.c), x.c); });
+  if (typeof CONFIG.dashboardAfterRender === "function") window._cleanup = CONFIG.dashboardAfterRender(data) || null;
 }
 
 async function viewEntity(name) {
@@ -1255,14 +1224,15 @@ async function viewSettings() {
 /* ---------- Router ---------- */
 function buildNav() {
   const entityNames = CONFIG.navEntities || Object.keys(CONFIG.entities);
-  const available = [{ id: "dashboard", label: "Dashboard", icon: "📊" }]
-    .concat((CONFIG.extraViews || []).map(v => ({ id: "x/" + v.id, label: v.label, icon: v.icon || "•" })))
-    .concat(entityNames.filter(k => CONFIG.entities[k]).map(k => ({ id: k, label: CONFIG.entities[k].label, icon: CONFIG.entities[k].icon || "•" })));
+  const available = [{ id: "dashboard", label: "DASHBOARD" }]
+    .concat((CONFIG.extraViews || []).map(v => ({ id: "x/" + v.id, label: v.id === "newsletter" ? "NEWSLETTER" : String(v.label).toUpperCase() })))
+    .concat(entityNames.filter(k => CONFIG.entities[k]).map(k => ({ id: k, label: k === "update" ? "ALUMNI" : k === "session" ? "SESSIONS" : String(CONFIG.entities[k].label).toUpperCase() })));
   const byId = new Map(available.map(item => [item.id, item]));
-  const items = CONFIG.navOrder ? CONFIG.navOrder.map(id => byId.get(id)).filter(Boolean) : available;
-  $("#nav").innerHTML = items.map(i => `<a href="#/${i.id}" data-id="${i.id}"><span>${i.icon}</span>${esc(i.label)}</a>`).join("") + `<div class="sep"></div><a href="#/settings" data-id="settings"><span>⚙️</span>Settings</a><a href="/" target="_blank" rel="noopener"><span>🎓</span>Student share page</a>`;
+  const items = (CONFIG.navOrder ? CONFIG.navOrder.map(id => byId.get(id)).filter(Boolean) : available).concat([{ id: "settings", label: "SETTINGS" }]);
+  $("#nav").innerHTML = items.map(i => `<a href="#/${i.id}" data-id="${i.id}" ${i.id === "dashboard" ? 'aria-label="Dashboard"' : ""}>${esc(i.label)}</a>`).join("");
 }
 async function route() {
+  if (location.hash === "#attention") { const target = document.querySelector("#attention"); if (target) target.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (window._cleanup) { try { window._cleanup(); } catch (e) {} window._cleanup = null; }
   const id = (location.hash.replace(/^#\//, "") || "dashboard");
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.id === id));
@@ -1278,7 +1248,9 @@ async function route() {
 
 /* ===================== BOOT (initialize storage, seed demo rows, then route) ===================== */
 (async function boot() {
-  $("#appName").textContent = CONFIG.appName; $("#tagline").textContent = CONFIG.tagline; $("#logo").textContent = CONFIG.logo || "";
+  // Header slots are optional in a layout (the redesigned top bar has no tagline slot), so fill only the ones that exist.
+  const setText = (sel, text) => { const el = $(sel); if (el) el.textContent = text; };
+  setText("#appName", CONFIG.appName); setText("#tagline", CONFIG.tagline); setText("#logo", CONFIG.logo || "");
   document.title = CONFIG.appName;
   let t = CONFIG.theme; try { t = localStorage.getItem("sbs:theme") || t; } catch (e) { }
   applyTheme(THEMES.includes(t) ? t : "ocean");
