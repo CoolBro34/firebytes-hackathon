@@ -86,6 +86,18 @@ tbody tr:hover{background:color-mix(in srgb,var(--primary) 5%,transparent)}
 tr.flag-warn td:first-child{box-shadow:inset 4px 0 0 var(--warn)}
 tr.flag-bad td:first-child{box-shadow:inset 4px 0 0 var(--danger)}
 tr.flag-good td:first-child{box-shadow:inset 4px 0 0 var(--ok)}
+.attention{margin-bottom:14px}
+.att-count{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--danger);color:#fff;font-size:12px}
+.att-list{list-style:none;padding:0;margin:0}
+.att-list li{padding:7px 10px;border-left:4px solid var(--border)}
+.att-list li.att-bad{border-color:var(--danger)}
+.att-list li.att-warn{border-color:var(--warn)}
+.att-list a{color:inherit;text-decoration:none}
+.att-list a:hover{text-decoration:underline}
+.att-ent,.att-why,.att-more{font-size:12px;color:var(--muted)}
+.att-ent{margin-left:6px}
+.att-why{margin-left:8px}
+.att-more{margin-top:8px}
 td.num,th.num{text-align:right}
 .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}
 .empty{padding:40px;text-align:center;color:var(--muted)}
@@ -136,7 +148,7 @@ td.num,th.num{text-align:right}
    Field types: text | textarea | number | money | date | select | checkbox | email | phone
    Field options: key, label, type, required, options[] (select), badge (select→colored pill),
                   hideInTable, placeholder, default, min
-   Entity options: label, singular, icon, titleField, fields[], seed[], summary[], charts[], rowClass(rec)
+   Entity options: label, singular, icon, titleField, fields[], seed[], summary[], charts[], rowClass(rec), attentionReason(rec)
    ============================================================================ */
 /*==CONFIG:START==*/
 const d = n => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); }; // date n days from today
@@ -493,6 +505,31 @@ function computeStat(s, rows) {
   }
 }
 
+function attentionHTML(data) {
+  const bad = [], warn = [];
+  for (const [name, ent] of Object.entries(CONFIG.entities)) {
+    if (typeof ent.rowClass !== "function") continue;
+    for (const rec of data[name] || []) {
+      let kind = "";
+      try { kind = ent.rowClass(rec); } catch (_) { continue; }
+      if (kind === "flag-bad") bad.push({ name, ent, rec, kind: "bad" });
+      else if (kind === "flag-warn") warn.push({ name, ent, rec, kind: "warn" });
+    }
+  }
+  const items = bad.concat(warn), total = items.length;
+  if (!total) return "";
+  const rows = items.slice(0, 8).map(({ name, ent, rec, kind }) => {
+    const title = rec[ent.titleField] || "(untitled)";
+    let reason = "";
+    if (typeof ent.attentionReason === "function") {
+      try { const value = ent.attentionReason(rec); if (typeof value === "string" && value) reason = `<span class="att-why">${esc(value)}</span>`; } catch (_) {}
+    }
+    return `<li class="att-${kind}"><a href="#/${esc(name)}">${esc(ent.icon || "")} <b>${esc(title)}</b> <span class="att-ent">${esc(ent.singular || "")}</span></a>${reason}</li>`;
+  }).join("");
+  const more = total > 8 ? `<div class="att-more">+${total - 8} more</div>` : "";
+  return `<div class="card attention"><h3>Needs attention <span class="att-count">${esc(total)}</span></h3><ul class="att-list">${rows}</ul>${more}</div>`;
+}
+
 /* ---------- Optional AI helper: the Worker calls the Claude API (key stays secret); the browser only sends an action name + record ---------- */
 function runAI(entName, actionId, rec) {
   const ent = CONFIG.entities[entName], act = (ent.aiActions || []).find(a => a.id === actionId);
@@ -513,8 +550,9 @@ const state = {};  // per-entity table state
 const main = $("#main");
 
 async function viewDashboard() {
-  main.innerHTML = `<h1>Dashboard</h1><p class="sub">${esc(CONFIG.tagline)}</p><div class="grid stats" id="stats"></div><div class="grid charts" id="charts"></div>`;
+  main.innerHTML = `<h1>Dashboard</h1><p class="sub">${esc(CONFIG.tagline)}</p><div id="attention"></div><div class="grid stats" id="stats"></div><div class="grid charts" id="charts"></div>`;
   const data = {}; for (const n of Object.keys(CONFIG.entities)) data[n] = await Store.list(n);
+  $("#attention").innerHTML = attentionHTML(data);
   let stats = "", chartDefs = [];
   for (const [n, ent] of Object.entries(CONFIG.entities)) {
     (ent.summary || []).forEach(s => {
