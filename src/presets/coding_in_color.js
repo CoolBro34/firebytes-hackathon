@@ -118,13 +118,13 @@ const CONFIG = {
       seed: [
         { date: d(-28), program: "AI Academy: Spark", headcount: 24, returning: 19, families: 6 },
         { date: d(-21), program: "AI Academy: Spark", headcount: 21, returning: 16, families: 4 },
-        { date: d(-14), program: "AI Academy: Spark", headcount: 17, returning: 11, families: 3 },
+        { date: d(-14), program: "AI Academy: Spark", headcount: 17, returning: 13, families: 3 },
         { date: d(-7), program: "AI Academy: Spark", headcount: 15, returning: 7, families: 2, notes: "Lower turnout; the schedule change was only posted on Instagram." },
         { date: d(-25), program: "AI Academy: Reboot", headcount: 12, returning: 11, families: 5 },
-        { date: d(-18), program: "AI Academy: Reboot", headcount: 12, returning: 8, families: 4 },
+        { date: d(-18), program: "AI Academy: Reboot", headcount: 12, returning: 11, families: 4 },
         { date: d(-11), program: "Hackathons", headcount: 13, returning: 12, families: 6, notes: "Demo data: family members joined the project showcase." },
-        { date: d(-20), program: "Hackathons", headcount: 9, returning: 4, families: 1 },
-                { date: d(-6), program: "Hackathons", headcount: 16, returning: 10, families: 9 }
+        { date: d(-20), program: "Hackathons", headcount: 9, returning: 6, families: 1 },
+                { date: d(-6), program: "Hackathons", headcount: 16, returning: 13, families: 9 }
       ]
     },
     issue: {
