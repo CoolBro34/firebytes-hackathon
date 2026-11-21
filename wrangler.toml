@@ -4,9 +4,9 @@ main = "worker.js"
 compatibility_date = "2025-01-01"
 
 # Optional shared storage: run `npx wrangler kv namespace create DATA`, then paste the id below and uncomment.
-# [[kv_namespaces]]
-# binding = "DATA"
-# id = "PASTE_NAMESPACE_ID_HERE"
+[[kv_namespaces]]
+binding = "DATA"
+id = "56a9ed1c5f0b4079af3a881846aa15dd"
 
 # Optional AI helper: NEVER put the key in this file. Use: npx wrangler secret put ANTHROPIC_API_KEY
 
