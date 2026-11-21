@@ -1,4 +1,3 @@
-<!-- TODO before 1:45 PM (submissions close 2:00 PM): paste the video link. -->
 # Coding in Color: Alumni Impact + Family Newsletter
 
 **Team:** Pranit (solo)
@@ -7,7 +6,7 @@
 
 **Live app:** [Student page](https://coding-in-color.coolpranit2009.workers.dev/) · [Staff portal](https://coding-in-color.coolpranit2009.workers.dev/staff) (demo staff passcode: `testpassword1`; fake demo data only, and a real deployment sets its own with `npx wrangler secret put STAFF_CODE`)
 
-**Video (3 min):** [unlisted YouTube / Drive link]
+**Video (3 min):** https://youtu.be/ouxasGMSUKY
 
 **Repository:** [github.com/CoolBro34/firebytes-hackathon](https://github.com/CoolBro34/firebytes-hackathon)
 
