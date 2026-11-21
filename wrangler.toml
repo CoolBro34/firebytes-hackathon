@@ -13,3 +13,7 @@ id = "56a9ed1c5f0b4079af3a881846aa15dd"
 # Workers AI for the donor-update and check-in drafts
 [ai]
 binding = "AI"
+
+# Text model for the small AI drafts (llama-3.1-8b was retired on Workers AI)
+[vars]
+AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
