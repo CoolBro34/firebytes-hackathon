@@ -1,5 +1,5 @@
 # Used only for command-line deploys (npx wrangler deploy). Pasting worker.js into the Cloudflare dashboard doesn't need this file.
-name = "your-team-name"            # lowercase letters, digits, dashes; becomes your-team-name.<subdomain>.workers.dev
+name = "coding-with-color"           # lowercase letters, digits, dashes; becomes your-team-name.<subdomain>.workers.dev
 main = "worker.js"
 compatibility_date = "2025-01-01"
 
@@ -9,3 +9,7 @@ compatibility_date = "2025-01-01"
 # id = "PASTE_NAMESPACE_ID_HERE"
 
 # Optional AI helper: NEVER put the key in this file. Use: npx wrangler secret put ANTHROPIC_API_KEY
+
+# Workers AI for the donor-update and check-in drafts
+[ai]
+binding = "AI"
