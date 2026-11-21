@@ -1,0 +1,12 @@
+{
+  "name": "nonprofit-starter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Config-driven nonprofit web app on Cloudflare Workers",
+  "scripts": {
+    "build": "python3 build/build_worker.py",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

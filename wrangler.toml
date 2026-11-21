@@ -1,0 +1,11 @@
+# Used only for command-line deploys (npx wrangler deploy). Pasting worker.js into the Cloudflare dashboard doesn't need this file.
+name = "your-team-name"            # lowercase letters, digits, dashes; becomes your-team-name.<subdomain>.workers.dev
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Optional shared storage: run `npx wrangler kv namespace create DATA`, then paste the id below and uncomment.
+# [[kv_namespaces]]
+# binding = "DATA"
+# id = "PASTE_NAMESPACE_ID_HERE"
+
+# Optional AI helper: NEVER put the key in this file. Use: npx wrangler secret put ANTHROPIC_API_KEY

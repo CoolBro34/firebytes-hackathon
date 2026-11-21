@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env
+*.bak
+__pycache__/
+.DS_Store
+.DS_Store
+.agents/
