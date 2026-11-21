@@ -154,8 +154,8 @@ td.num,th.num{text-align:right}
 // PRESET: Coding in Color — Instagram posts -> family newsletter, plus anonymous retention tracking.
 // No student names or personal data are stored anywhere (the org can't keep student data). All demo content is FAKE.
 const d = n => { const t = new Date(); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); }; // date n days from today
-const ORG = { name: "Coding in Color", mission: "Talent is everywhere. Accessibility isn't. We make coding accessible to K-12 students of color." };
-const PROGRAMS = ["Saturday Code Club", "Girls Who Game", "Teen Web Lab"];
+const ORG = { name: "Coding in Color", mission: "Coding in Color is on a mission to deliver educational resources for students who currently do not have access to computer science courses in their communities nor schools." };
+const PROGRAMS = ["AI Academy: Spark", "AI Academy: Amplify", "AI Academy: Reboot", "Hackathons", "Summer Camps"];
 const pct = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : "");
 const avg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
@@ -202,14 +202,14 @@ const NL = {
   },
   // Email-safe HTML (inline styles) for pasting into Gmail / Mailchimp / any email tool
   emailHTML(n) {
-    const e = s => esc(s), P = "#7c3aed";
+    const e = s => esc(s), P = "#2e7d32";
     return `<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5">
 <div style="display:none;max-height:0;overflow:hidden">${e(n.preheader)}</div>
 <div style="background:${P};color:#fff;padding:22px 24px;border-radius:12px 12px 0 0"><div style="font-size:13px;opacity:.85">${e(ORG.name)}</div><div style="font-size:22px;font-weight:bold">${e(n.subject)}</div></div>
 <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:22px 24px;border-radius:0 0 12px 12px">
 <p style="font-size:16px;margin:0 0 18px">${e(n.intro)}</p>
 ${n.sections.map(s => `<h2 style="font-size:18px;color:${P};margin:22px 0 6px">${e(s.heading)}</h2><p style="margin:0 0 8px;font-size:15px">${e(s.body)}</p>${s.link ? `<a href="${e(s.link)}" style="color:${P};font-weight:bold;font-size:14px">See the post &rarr;</a>` : ""}`).join("\n")}
-<div style="margin-top:26px;padding:16px;background:#f5f3ff;border-radius:10px;font-size:16px;font-weight:bold;color:#3b0764">${e(n.cta)}</div>
+<div style="margin-top:26px;padding:16px;background:#e8f5e9;border-radius:10px;font-size:16px;font-weight:bold;color:#123524">${e(n.cta)}</div>
 <p style="margin-top:24px;font-size:12px;color:#6b7280">${e(ORG.mission)}<br>You're getting this because your family is part of ${e(ORG.name)}.</p>
 </div></div>`;
   },
@@ -219,7 +219,7 @@ ${n.sections.map(s => `<h2 style="font-size:18px;color:${P};margin:22px 0 6px">$
 
 const CONFIG = {
   appName: "Coding in Color", tagline: "Talent is everywhere. Accessibility isn't.", logo: "🎨",
-  theme: "ocean", customTheme: { "--primary": "#7c3aed", "--side": "#1e1b4b", "--side-text": "#ddd6fe" },
+  theme: "ocean", customTheme: { "--primary": "#2e7d32", "--side": "#123524", "--side-text": "#d1fae5" },
   currency: "$", storage: "auto", apiBase: "",
 
   entities: {
@@ -242,11 +242,11 @@ const CONFIG = {
       ],
       charts: [{ title: "Posts by type", type: "doughnut", groupBy: "kind" }],
       seed: [
-        { title: "Spring session sign-ups open", date: d(-3), kind: "sign-up", link: "https://instagram.com/p/demo1", caption: "Spring Saturday Code Club sign-ups are OPEN! 🎉 Free for K-12 students. Laptops provided, no experience needed. Link in bio to register. Spots are limited!", imageNotes: "A colorful flyer announcing spring sign-ups. Text in image: SPRING CODE CLUB · SATURDAYS 10AM-12PM · FREE · LAPTOPS PROVIDED", transcript: "", used: false },
-        { title: "Game showcase recap", date: d(-6), kind: "showcase", link: "https://instagram.com/p/demo2", caption: "So proud of our Girls Who Game crew 💜 Twelve original games built in six weeks and presented to families last Friday. Thank you to everyone who came out!", imageNotes: "Students presenting games on laptops to a room of families; a projector screen shows a pixel-art platform game.", transcript: "We started with zero lines of code and now we have twelve games. My favorite part was seeing families play them.", used: false },
-        { title: "No class Thanksgiving weekend", date: d(-1), kind: "reminder", link: "https://instagram.com/p/demo3", caption: "Reminder: no Saturday Code Club on Nov 28 for Thanksgiving weekend. See you Dec 5! 🦃", imageNotes: "Text graphic. Text in image: NO CLASS NOV 28 · BACK DEC 5", transcript: "", used: false },
-        { title: "Teen Web Lab field trip", date: d(-17), kind: "event", link: "https://instagram.com/p/demo4", caption: "Teen Web Lab is visiting a local tech office on Dec 12! Permission slips due Dec 5. Ask your mentor for a copy.", imageNotes: "Flyer with a city skyline. Text in image: FIELD TRIP DEC 12 · SLIPS DUE DEC 5", transcript: "", used: false },
-        { title: "Volunteer mentors wanted", date: d(-24), kind: "news", link: "https://instagram.com/p/demo5", caption: "Know a software developer who loves to teach? We're looking for volunteer mentors for 2 hours on Saturdays.", imageNotes: "", transcript: "", used: true }
+        { title: "Spark spring cohort sign-ups open", date: d(-3), kind: "sign-up", link: "https://instagram.com/p/demo1", caption: "AI Academy: Spark spring cohort sign-ups are OPEN for high school students! Free, hands-on AI projects, no experience needed. Link in bio to register. Spots are limited!", imageNotes: "A green flyer for AI Academy: Spark. Text in image: SPRING COHORT · HIGH SCHOOL · FREE · SIGN UP NOW", transcript: "", used: false },
+        { title: "Hackathon showcase recap", date: d(-6), kind: "showcase", link: "https://instagram.com/p/demo2", caption: "So proud of our student hackers! Teams built apps and games in one day and presented them to families. Thank you to every parent who came out!", imageNotes: "Students presenting projects on laptops to a room of families.", transcript: "We came in with an idea this morning and now we have a working app.", used: false },
+        { title: "Schedule change this Saturday", date: d(-1), kind: "reminder", link: "https://instagram.com/p/demo3", caption: "Heads up: this Saturday's Spark session moves to 1-3 PM (instead of 10-12) because of the holiday weekend. Same room, same laptops!", imageNotes: "Text graphic. Text in image: SATURDAY SESSION MOVED · 1-3 PM", transcript: "", used: false },
+        { title: "Winter hackathon: register your team", date: d(-17), kind: "event", link: "https://instagram.com/p/demo4", caption: "Our winter student hackathon is coming! Build a game or app with a team and meet mentors from Arizona tech companies. Registration link in bio.", imageNotes: "Flyer with a laptop and code brackets. Text in image: WINTER HACKATHON · STUDENTS · REGISTER IN BIO", transcript: "", used: false },
+        { title: "AI Academy: Reboot for parents", date: d(-24), kind: "news", link: "https://instagram.com/p/demo5", caption: "Parents and guardians: AI Academy: Reboot is a free virtual program with weekly live sessions on computer, AI and everyday digital skills.", imageNotes: "", transcript: "", used: true }
       ]
     },
     session: {
@@ -269,16 +269,15 @@ const CONFIG = {
       ],
       charts: [{ title: "Sessions logged by program", type: "bar", groupBy: "program" }],
       seed: [
-        { date: d(-28), program: "Saturday Code Club", headcount: 24, returning: 19, families: 6 },
-        { date: d(-21), program: "Saturday Code Club", headcount: 21, returning: 16, families: 4 },
-        { date: d(-14), program: "Saturday Code Club", headcount: 17, returning: 11, families: 3 },
-        { date: d(-7), program: "Saturday Code Club", headcount: 15, returning: 7, families: 2, notes: "Lower turnout; the schedule change was only posted on Instagram." },
-        { date: d(-25), program: "Girls Who Game", headcount: 12, returning: 11, families: 5 },
-        { date: d(-18), program: "Girls Who Game", headcount: 12, returning: 11, families: 4 },
-        { date: d(-11), program: "Girls Who Game", headcount: 13, returning: 12, families: 14, notes: "Showcase night!" },
-        { date: d(-20), program: "Teen Web Lab", headcount: 9, returning: 7, families: 1 },
-        { date: d(-13), program: "Teen Web Lab", headcount: 8, returning: 6, families: 0 },
-        { date: d(-6), program: "Teen Web Lab", headcount: 7, returning: 5, families: 1 }
+        { date: d(-28), program: "AI Academy: Spark", headcount: 24, returning: 19, families: 6 },
+        { date: d(-21), program: "AI Academy: Spark", headcount: 21, returning: 16, families: 4 },
+        { date: d(-14), program: "AI Academy: Spark", headcount: 17, returning: 11, families: 3 },
+        { date: d(-7), program: "AI Academy: Spark", headcount: 15, returning: 7, families: 2, notes: "Lower turnout; the schedule change was only posted on Instagram." },
+        { date: d(-25), program: "AI Academy: Reboot", headcount: 12, returning: 11, families: 5 },
+        { date: d(-18), program: "AI Academy: Reboot", headcount: 12, returning: 8, families: 4 },
+        { date: d(-11), program: "Hackathons", headcount: 13, returning: 12, families: 6, notes: "Demo data: family members joined the project showcase." },
+        { date: d(-20), program: "Hackathons", headcount: 9, returning: 4, families: 1 },
+                { date: d(-6), program: "Hackathons", headcount: 16, returning: 10, families: 9 }
       ]
     },
     issue: {

@@ -9,10 +9,10 @@
 **Live app:** https://coding-in-color.coolpranit2009.workers.dev
 **Video (3 min):** [unlisted YouTube / Drive link]
 
-> *"Talent is everywhere. Accessibility isn't."* (Coding in Color's mission)
+> *"Coding in Color is on a mission to deliver educational resources for students who currently do not have access to computer science courses in their communities nor schools."* (Coding in Color's mission)
 
 ## The problem
-Coding in Color makes coding accessible to K-12 students of color. Student and parent retention is low, and almost every announcement (sign-ups, schedule changes, showcases, field trips) goes out only on Instagram, so families who don't check Instagram miss them and drift away. Writing a separate newsletter takes time the team doesn't have. They also can't store student data like names, so any tool has to work without it.
+Coding in Color delivers educational resources in computer science to Arizona students who lack access to courses in their communities or schools: over 500 students since 2024, more than 80% from historically underserved backgrounds (per codingincolor.net). In their words: *"Talent is everywhere. Accessibility isn't."* Student and parent retention is low, and almost every announcement (sign-ups, schedule changes, showcases, field trips) goes out only on Instagram, so families who don't check Instagram miss them and drift away. Writing a separate newsletter takes time the team doesn't have. They also can't store student data like names, so any tool has to work without it.
 
 ## How it works
 1. **Add an Instagram post:** paste the caption and drop in the photos and/or the reel. **Cloudflare Workers AI** reads the text inside flyers, describes the photos, and transcribes what's said in the reel. Staff can review and edit everything before saving.
