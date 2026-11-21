@@ -1,6 +1,6 @@
 <!--
   TODO BEFORE 1:15 PM:
-  [ ] Paste the video link                            [ ] Add screenshots/dashboard.jpg + screenshots/newsletter.jpg
+  [ ] Paste the video link                            [x] Screenshots added
   [ ] Repo is PUBLIC                                  [ ] Last commit before 1:30 PM
 -->
 # Coding in Color: Post-to-Newsletter
