@@ -8,6 +8,293 @@ const PROGRAMS = ["AI Academy: Spark", "AI Academy: Amplify", "AI Academy: Reboo
 const pct = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : "");
 const avg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
+// Pure selection and label formatting, also used by the dependency-free gallery tests.
+function alumniWallItems(updates) {
+  const rows = Array.isArray(updates) ? updates : [];
+  const shared = rows.filter(row => row && row.consentShare === true);
+  const newest = (a, b) => (Date.parse(b.submittedAt || "") || 0) - (Date.parse(a.submittedAt || "") || 0);
+  const approved = shared.filter(row => row.status === "featured" || row.status === "reviewed").slice().sort(newest);
+  const selected = approved.slice(0, 12);
+  if (selected.length < 3) {
+    const newUpdates = shared.filter(row => row.status === "new").slice().sort(newest);
+    selected.push(...newUpdates.slice(0, 3 - selected.length));
+  }
+  return selected.map(row => {
+    const firstName = String(row.firstName || "").trim().split(/\s+/)[0];
+    const programs = Array.isArray(row.programs) ? row.programs.join(", ") : String(row.programs || "");
+    const firstProgram = programs.split(",")[0].trim();
+    return {
+      firstName,
+      nowDoing: String(row.nowDoing || ""),
+      field: String(row.field || ""),
+      school: String(row.school || ""),
+      story: String(row.story || ""),
+      programs,
+      submittedAt: String(row.submittedAt || ""),
+      label: `${firstName || "Alum"} · ${firstProgram || "Program"}`
+    };
+  });
+}
+
+// Lazy OGL gallery. All card art is drawn from consented text in memory; no photo is uploaded or saved.
+const GALLERY = {
+  create(container, options) {
+    let destroyed = false, renderer = null, raf = 0, observer = null, activeCanvas = null;
+    const listeners = [];
+    const add = (target, type, fn, config) => {
+      target.addEventListener(type, fn, config);
+      listeners.push([target, type, fn, config]);
+    };
+    const stopWebGL = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      if (observer) observer.disconnect();
+      observer = null;
+      while (listeners.length) {
+        const [target, type, fn, config] = listeners.pop();
+        target.removeEventListener(type, fn, config);
+      }
+      if (renderer) {
+        try { renderer.gl.getExtension("WEBGL_lose_context")?.loseContext(); } catch (e) { }
+        renderer = null;
+      }
+      if (activeCanvas) activeCanvas.remove();
+      activeCanvas = null;
+    };
+    const destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      stopWebGL();
+      container.replaceChildren();
+    };
+    const screenReaderList = cards => {
+      const list = document.createElement("ul");
+      list.className = "cic-gallery-sr-only";
+      list.setAttribute("aria-label", "Consented alumni stories");
+      cards.forEach(card => {
+        const item = document.createElement("li");
+        item.textContent = `${card.label}. ${card.firstName || "A Coding in Color alum"}. ${card.nowDoing}. ${[card.field, card.school].filter(Boolean).join(" · ")}. Programs: ${card.programs}. ${card.story.slice(0, 110)}`;
+        list.appendChild(item);
+      });
+      return list;
+    };
+    const drawCards = cards => cards.map((card, index) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800; canvas.height = 600;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas is unavailable");
+      ctx.fillStyle = index % 2 ? "#0A8F27" : "#000000";
+      ctx.fillRect(0, 0, 800, 600);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "500 30px Poppins, Arial, sans-serif";
+      ctx.fillText("‹ IN ›", 54, 64);
+      ctx.font = "500 22px Poppins, Arial, sans-serif";
+      ctx.fillText(card.firstName || "A Coding in Color alum", 54, 124, 680);
+      ctx.font = "500 54px Archivo, Poppins, Arial, sans-serif";
+      const headline = card.nowDoing ? card.nowDoing.charAt(0).toUpperCase() + card.nowDoing.slice(1) : "Alumni story";
+      wrapCanvasText(ctx, headline, 54, 215, 690, 66, 2);
+      ctx.font = "300 24px Poppins, Arial, sans-serif";
+      const schoolLine = [card.field, card.school].filter(Boolean).join(" · ");
+      if (schoolLine) wrapCanvasText(ctx, schoolLine, 54, 335, 690, 34, 1);
+      let chipX = 54, chipY = schoolLine ? 374 : 350;
+      ctx.font = "400 18px Poppins, Arial, sans-serif";
+      card.programs.split(",").map(value => value.trim()).filter(Boolean).slice(0, 6).forEach(program => {
+        const width = Math.min(660, ctx.measureText(program).width + 24);
+        if (chipX + width > 746) { chipX = 54; chipY += 42; }
+        ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 2; ctx.strokeRect(chipX, chipY, width, 34);
+        ctx.fillStyle = "#ffffff"; ctx.fillText(program, chipX + 12, chipY + 23, width - 20);
+        chipX += width + 10;
+      });
+      ctx.font = "300 22px Poppins, Arial, sans-serif";
+      wrapCanvasText(ctx, excerpt(card.story), 54, 490, 690, 32, 2);
+      return { ...card, canvas, image: canvas.toDataURL("image/png"), artAlt: `${card.firstName || "A Coding in Color alum"}: ${headline}. ${schoolLine}. ${card.programs}. ${excerpt(card.story)}` };
+    });
+    const renderStatic = cards => {
+      if (destroyed) return;
+      stopWebGL();
+      container.classList.add("cic-wall-static");
+      container.setAttribute("aria-label", "Consented alumni stories");
+      const row = document.createElement("div"); row.className = "cic-wall-row";
+      cards.forEach(card => {
+        const figure = document.createElement("figure"); figure.className = "cic-wall-figure";
+        const image = document.createElement("img"); image.src = card.image; image.alt = card.artAlt;
+        const caption = document.createElement("figcaption"); caption.textContent = card.label;
+        figure.append(image, caption); row.appendChild(figure);
+      });
+      container.replaceChildren(row, screenReaderList(cards));
+    };
+    const renderEmpty = () => {
+      if (destroyed) return;
+      const message = document.createElement("p");
+      message.className = "cic-wall-empty";
+      message.textContent = "No consented alumni stories yet. Share the student page link to collect some. ";
+      const link = document.createElement("a"); link.href = "/"; link.textContent = "Student share page";
+      message.appendChild(link); container.replaceChildren(message);
+    };
+    const startWebGL = async (cards, ogl) => {
+      const { Renderer, Camera, Transform, Plane, Program, Mesh, Texture, Vec2 } = ogl;
+      if (typeof ResizeObserver === "undefined") throw new Error("ResizeObserver is unavailable");
+      const images = await Promise.all(cards.map(card => new Promise((resolve, reject) => {
+        const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = card.image;
+      })));
+      if (destroyed) return;
+      const height = Math.max(1, container.clientHeight);
+      renderer = new Renderer({ alpha: true, antialias: true, dpr: Math.min(window.devicePixelRatio || 1, 2) });
+      const gl = renderer.gl;
+      activeCanvas = gl.canvas;
+      activeCanvas.setAttribute("aria-hidden", "true");
+      activeCanvas.style.cssText = "display:block;position:absolute;inset:0;width:100%;height:100%;";
+      const srList = screenReaderList(cards);
+      container.replaceChildren(activeCanvas, srList);
+      const camera = new Camera(gl, { fov: 45, near: 0.1, far: 100 });
+      camera.position.z = 20;
+      const scene = new Transform();
+      const geometry = new Plane(gl, { widthSegments: 20, heightSegments: 10 });
+      const vertex = `precision highp float; attribute vec3 position; attribute vec2 uv; uniform mat4 modelViewMatrix; uniform mat4 projectionMatrix; uniform float uTime; uniform float uSpeed; varying vec2 vUv; void main(){vUv=uv;vec3 p=position;p.z=(sin(p.x*4.0+uTime)*1.5+cos(p.y*2.0+uTime)*1.5)*(0.1+uSpeed*0.5);gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`;
+      const fragment = `precision highp float; uniform vec2 uImageSizes; uniform vec2 uPlaneSizes; uniform sampler2D tMap; uniform float uBorderRadius; varying vec2 vUv; float roundedBoxSDF(vec2 p,vec2 b,float r){vec2 d=abs(p)-b;return length(max(d,vec2(0.0)))+min(max(d.x,d.y),0.0)-r;} void main(){vec2 ratio=vec2(min((uPlaneSizes.x/uPlaneSizes.y)/(uImageSizes.x/uImageSizes.y),1.0),min((uPlaneSizes.y/uPlaneSizes.x)/(uImageSizes.y/uImageSizes.x),1.0));vec2 uv=vec2(vUv.x*ratio.x+(1.0-ratio.x)*0.5,vUv.y*ratio.y+(1.0-ratio.y)*0.5);vec4 color=texture2D(tMap,uv);float d=roundedBoxSDF(vUv-0.5,vec2(0.5-uBorderRadius),uBorderRadius);float alpha=1.0-smoothstep(-0.002,0.002,d);gl_FragColor=vec4(color.rgb,alpha);}`;
+      const titleFragment = `precision highp float; uniform sampler2D tMap; varying vec2 vUv; void main(){vec4 color=texture2D(tMap,vUv);if(color.a<0.1)discard;gl_FragColor=color;}`;
+      const unit = (2 * camera.position.z * Math.tan(Math.PI / 8)) / height;
+      const cardHeight = height * 0.62, cardWidth = cardHeight * 4 / 3, titleHeight = 34, spacing = cardWidth + height * 0.09;
+      const radius = (height * height + options.bend * options.bend) / (2 * options.bend);
+      const entries = cards.map((card, index) => {
+        const texture = new Texture(gl); texture.image = images[index]; texture.needsUpdate = true;
+        const program = new Program(gl, { vertex, fragment, transparent: true, depthTest: false, depthWrite: false, uniforms: {
+          tMap: { value: texture }, uImageSizes: { value: new Vec2(800, 600) }, uPlaneSizes: { value: new Vec2(cardWidth, cardHeight) },
+          uBorderRadius: { value: options.borderRadius }, uTime: { value: Math.random() * 100 }, uSpeed: { value: 0 }
+        } });
+        const mesh = new Mesh(gl, { geometry, program }); mesh.setParent(scene);
+        const titleCanvas = document.createElement("canvas"); titleCanvas.width = 800; titleCanvas.height = 100;
+        const ctx = titleCanvas.getContext("2d"); ctx.clearRect(0, 0, 800, 100); ctx.fillStyle = options.textColor;
+        let fontSize = 28; ctx.textAlign = "center";
+        do { ctx.font = fontSize === 28 ? options.font : `500 ${fontSize}px Poppins, Arial, sans-serif`; fontSize--; } while (ctx.measureText(card.label).width > 750 && fontSize > 17);
+        ctx.fillText(card.label, 400, 64, 760);
+        const titleTexture = new Texture(gl); titleTexture.image = titleCanvas; titleTexture.needsUpdate = true;
+        const titleProgram = new Program(gl, { vertex: `precision highp float; attribute vec3 position; attribute vec2 uv; uniform mat4 modelViewMatrix; uniform mat4 projectionMatrix; varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`, fragment: titleFragment, transparent: true, depthTest: false, depthWrite: false, uniforms: { tMap: { value: titleTexture } } });
+        const title = new Mesh(gl, { geometry: new Plane(gl), program: titleProgram }); title.setParent(scene);
+        return { mesh, title, index };
+      });
+      const scroll = { current: 0, target: 0 }, pointer = { active: false, start: 0, target: 0 };
+      const setSizes = () => {
+        if (!renderer) return;
+        const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
+        renderer.setSize(w, h); camera.perspective({ aspect: w / h });
+      };
+      const onWheel = event => { event.preventDefault(); scroll.target += (event.deltaY || event.deltaX) * options.scrollSpeed * 0.2; };
+      const onMouseDown = event => { pointer.active = true; pointer.start = event.clientX; pointer.target = scroll.target; container.style.cursor = "grabbing"; };
+      const onMouseMove = event => { if (pointer.active) scroll.target = pointer.target + (pointer.start - event.clientX) * options.scrollSpeed * 0.025; };
+      const onRelease = () => { if (pointer.active) scroll.target = Math.round(scroll.target / spacing) * spacing; pointer.active = false; container.style.cursor = "grab"; };
+      const onTouchStart = event => { if (event.touches.length) { pointer.active = true; pointer.start = event.touches[0].clientX; pointer.target = scroll.target; } };
+      const onTouchMove = event => { if (pointer.active && event.touches.length) { event.preventDefault(); scroll.target = pointer.target + (pointer.start - event.touches[0].clientX) * options.scrollSpeed * 0.025; } };
+      const onKey = event => {
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+          event.preventDefault(); scroll.target += (event.key === "ArrowRight" ? 1 : -1) * spacing;
+        }
+      };
+      add(container, "wheel", onWheel, { passive: false });
+      add(container, "mousedown", onMouseDown); add(container, "mousemove", onMouseMove); add(window, "mouseup", onRelease);
+      add(container, "touchstart", onTouchStart, { passive: true }); add(container, "touchmove", onTouchMove, { passive: false });
+      add(window, "touchend", onRelease); add(window, "touchcancel", onRelease); add(container, "keydown", onKey);
+      container.style.cursor = "grab";
+      setSizes(); observer = new ResizeObserver(setSizes); observer.observe(container);
+      let previous = 0;
+      const frame = () => {
+        if (destroyed || !renderer) return;
+        scroll.current += (scroll.target - scroll.current) * options.scrollEase;
+        const speed = Math.min(2, Math.abs(scroll.current - previous) / Math.max(1, spacing)); previous = scroll.current;
+        const total = spacing * entries.length;
+        entries.forEach(entry => {
+          let x = ((entry.index * spacing - scroll.current + total / 2) % total + total) % total - total / 2;
+          const safeX = Math.max(-radius * 0.999, Math.min(radius * 0.999, x));
+          const arc = radius - Math.sqrt(radius * radius - safeX * safeX);
+          const y = -arc;
+          entry.mesh.position.set(x * unit, y * unit, 0); entry.mesh.rotation.z = -Math.sign(x) * Math.asin(safeX / radius);
+          entry.mesh.scale.set(cardWidth * unit, cardHeight * unit, 1);
+          entry.mesh.program.uniforms.uPlaneSizes.value.set(cardWidth, cardHeight);
+          entry.mesh.program.uniforms.uTime.value += 0.04;
+          entry.mesh.program.uniforms.uSpeed.value = speed;
+          entry.title.position.set(x * unit, (y - cardHeight / 2 - titleHeight / 2 - 8) * unit, 0.1);
+          entry.title.rotation.z = entry.mesh.rotation.z;
+          entry.title.scale.set(cardWidth * unit, titleHeight * unit, 1);
+        });
+        renderer.render({ scene, camera }); raf = requestAnimationFrame(frame);
+      };
+      frame();
+    };
+    return {
+      destroy,
+      mount(updates) {
+        void (async () => {
+          try {
+            await document.fonts.ready;
+            if (destroyed) return;
+            const items = alumniWallItems(updates);
+            if (!items.length) { renderEmpty(); return; }
+            const cards = drawCards(items);
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { renderStatic(cards); return; }
+            const ogl = await import("https://cdn.jsdelivr.net/npm/ogl@0.0.116/+esm");
+            if (destroyed) return;
+            try { await startWebGL(cards, ogl); }
+            catch (error) { stopWebGL(); renderStatic(cards); }
+          } catch (error) {
+            if (!destroyed) {
+              try { renderStatic(drawCards(alumniWallItems(updates))); }
+              catch (fallbackError) { renderEmpty(); }
+            }
+          }
+        })();
+      }
+    };
+  }
+};
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+  const words = String(text || "").split(/\s+/).filter(Boolean), lines = [];
+  let line = "";
+  words.forEach(word => {
+    const next = line ? line + " " + word : word;
+    if (line && ctx.measureText(next).width > maxWidth) { lines.push(line); line = word; }
+    else line = next;
+  });
+  if (line) lines.push(line);
+  lines.slice(0, maxLines).forEach((value, index) => {
+    if (index === maxLines - 1 && lines.length > maxLines) value = value.slice(0, Math.max(0, value.length - 1)) + "…";
+    ctx.fillText(value, x, y + index * lineHeight, maxWidth);
+  });
+}
+function excerpt(text) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  return value.length > 110 ? value.slice(0, 109).trimEnd() + "…" : value;
+}
+
+// The generic dashboard is engine-owned, so add this preset card only after its charts exist.
+function watchDashboardForAlumniWall() {
+  const dashboard = document.querySelector("#main");
+  if (!dashboard || typeof MutationObserver === "undefined") return;
+  const addWall = () => {
+    const stats = dashboard.querySelector("#stats"), charts = dashboard.querySelector("#charts");
+    if (!stats || !charts || !charts.children.length || dashboard.querySelector("#alumniWallCard")) return;
+    const section = document.createElement("section"); section.id = "alumniWallCard"; section.className = "card"; section.style.marginBottom = "14px";
+    const styles = document.createElement("style");
+    styles.textContent = ".cic-wall-host{position:relative;height:420px;background:#000;overflow:hidden;border-radius:0}.cic-gallery-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.cic-wall-row{display:flex;align-items:center;gap:28px;height:100%;overflow-x:auto;padding:18px 22px;scroll-snap-type:x mandatory}.cic-wall-figure{flex:0 0 min(74vw,330px);margin:0;scroll-snap-align:center;color:#fff;text-align:center;font:500 14px Poppins,Arial,sans-serif}.cic-wall-figure img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain}.cic-wall-figure figcaption{padding:8px 4px 0}.cic-wall-empty{color:#fff;text-align:center;padding:80px 18px;margin:0;font:400 15px Poppins,Arial,sans-serif}.cic-wall-empty a{color:#fff;font-weight:500;text-underline-offset:3px}@media(max-width:640px){.cic-wall-host{height:300px}.cic-wall-figure{flex-basis:76vw}}";
+    const heading = document.createElement("h2"); heading.textContent = "Alumni wall"; heading.style.margin = "0 0 4px";
+    const subline = document.createElement("p"); subline.className = "sub"; subline.textContent = "Consented stories from former students. Drag or scroll to explore.";
+    const host = document.createElement("div"); host.id = "alumniWall"; host.className = "cic-wall-host";
+    host.tabIndex = 0; host.setAttribute("role", "region"); host.setAttribute("aria-label", "Alumni wall, use left and right arrow keys");
+    const loading = document.createElement("p"); loading.textContent = "Loading alumni stories…"; loading.style.cssText = "color:#fff;padding:24px"; host.appendChild(loading);
+    const review = document.createElement("p"); review.style.margin = "12px 0 0";
+    const link = document.createElement("a"); link.href = "#/update"; link.textContent = "Review all alumni updates →"; review.appendChild(link);
+    section.append(styles, heading, subline, host, review);
+    dashboard.insertBefore(section, stats);
+    const wall = GALLERY.create(host, { bend: 3, textColor: "#ffffff", borderRadius: 0.04, font: "500 28px Poppins, sans-serif", scrollSpeed: 2, scrollEase: 0.05 });
+    window._cleanup = wall.destroy;
+    Store.list("update").then(updates => wall.mount(updates)).catch(() => wall.mount([]));
+  };
+  const observer = new MutationObserver(addWall);
+  observer.observe(dashboard, { childList: true, subtree: true });
+  addWall();
+}
+watchDashboardForAlumniWall();
+
 /* ---------- Newsletter helpers: format and prepare drafts in the browser; AI calls remain in the Worker. ---------- */
 const NL = {
   async postJSON(path, body) {
@@ -158,6 +445,8 @@ async function newsletterView(el, api) {
 }
 
 const CONFIG = {
+  // Shown as a "Demo data" badge on the dashboard so judges know the numbers are fictional sample data. Set to "" for real use.
+  demoNotice: "All students, sessions and posts here are fictional sample data.",
   appName: "Coding in Color", tagline: "Talent is everywhere, opportunity is not.", logo: "‹IN›",
   theme: "ocean", customTheme: { "--primary": "#0A8F27", "--side": "#000000", "--side-text": "#e5e5e5" },
   currency: "$", storage: "auto", apiBase: "", navEntities: ["update", "session"], navOrder: ["dashboard", "update", "x/newsletter", "session"],

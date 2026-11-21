@@ -21,6 +21,10 @@ Coding in Color reports that over 500 students have participated in its programs
 - **Instagram posts to newsletter:** staff paste Instagram post details, optionally use AI to read images or transcribe a reel, then combine selected posts with consented alumni spotlights into a newsletter draft. They review and copy or download the draft for their email tool.
 - **Anonymous session headcounts:** staff can record aggregate attendance and returning counts without storing student names.
 
+### Alumni wall
+
+The dashboard gallery shows only consented featured/reviewed alumni stories (with consented new updates used only to fill a wall with fewer than three stories); its cards are drawn from text and never use photos. OGL loads from jsDelivr at runtime; `prefers-reduced-motion`, unavailable WebGL, or import failures use a static horizontal gallery. Gallery adapted from an open-source CircularGallery component (OGL), ported to vanilla JS.
+
 ![Student share page](screenshots/share.jpg)
 ![Dashboard](screenshots/dashboard.jpg)
 ![Newsletter](screenshots/newsletter.jpg)
@@ -53,7 +57,7 @@ The Worker serves both HTML pages and all API endpoints from one deployment. The
 │   ├── presets/              # Configurations (starter presets are examples; Coding in Color uses its own)
 │   │   ├── bakery_demo.js     # Starter bakery example
 │   │   ├── clients.js         # Starter client tracker
-│   │   ├── coding_in_color.js # Active Coding in Color configuration
+│   │   ├── coding_in_color.js # Active Coding in Color configuration and gallery
 │   │   ├── directory.js       # Starter directory example
 │   │   ├── donors.js          # Starter donor tracker
 │   │   ├── events.js          # Starter event tracker
