@@ -8,6 +8,8 @@
 
 Coding in Color cannot see what students do after they leave, so it is hard to show the long-term impact of its computer science and AI education for Arizona students. Announcements live only on Instagram, where families may miss them.
 
+> “Talent is everywhere, opportunity is not” — Coding in Color
+
 ## How it works
 
 1. Students return to the public page at `/` and voluntarily share what they are doing now, which programs they attended, and what Coding in Color helped them with.
